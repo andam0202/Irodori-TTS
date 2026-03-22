@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import random
 import re
@@ -37,6 +38,7 @@ from irodori_tts.tokenizer import PretrainedTextTokenizer
 WANDB_MODES = {"online", "offline", "disabled"}
 CHECKPOINT_STEP_RE = re.compile(r"^checkpoint_(\d+)\.pt$")
 CHECKPOINT_BEST_VAL_LOSS_RE = re.compile(r"^checkpoint_best_val_loss_(\d+)_(-?\d+(?:\.\d+)?)\.pt$")
+SAFETENSORS_CONFIG_META_KEY = "config_json"
 
 
 def set_seed(seed: int) -> None:
@@ -288,6 +290,57 @@ def initialize_text_embedding_from_pretrained(
     del text_backbone
 
 
+def _load_model_state_from_checkpoint(path: Path) -> tuple[dict[str, torch.Tensor], dict | None]:
+    if path.suffix.lower() == ".safetensors":
+        from safetensors import safe_open
+        from safetensors.torch import load_file as load_safetensors_file
+
+        checkpoint_model_cfg = None
+        with safe_open(str(path), framework="pt", device="cpu") as handle:
+            metadata = dict(handle.metadata() or {})
+        config_json = metadata.get(SAFETENSORS_CONFIG_META_KEY)
+        if config_json:
+            parsed = json.loads(config_json)
+            if isinstance(parsed, dict):
+                checkpoint_model_cfg = parsed
+        return load_safetensors_file(str(path), device="cpu"), checkpoint_model_cfg
+
+    payload = torch.load(path, map_location="cpu", weights_only=True)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Checkpoint payload must be a dictionary, got {type(payload)!r}.")
+
+    raw_model = payload.get("model")
+    if raw_model is None and all(isinstance(v, torch.Tensor) for v in payload.values()):
+        raw_model = payload
+    if not isinstance(raw_model, dict):
+        raise ValueError(f"Checkpoint does not contain a model state dictionary: {path}")
+
+    checkpoint_model_cfg = payload.get("model_config")
+    if checkpoint_model_cfg is not None and not isinstance(checkpoint_model_cfg, dict):
+        raise ValueError(f"Checkpoint model_config must be a dictionary when present: {path}")
+    return raw_model, checkpoint_model_cfg
+
+
+def _check_model_config_compatibility(
+    checkpoint_path: Path,
+    checkpoint_model_cfg: dict | None,
+    current_model_cfg: ModelConfig,
+) -> None:
+    if checkpoint_model_cfg is None:
+        return
+
+    for key in ("latent_dim", "latent_patch_size", "text_vocab_size", "text_dim", "model_dim"):
+        checkpoint_value = checkpoint_model_cfg.get(key)
+        if checkpoint_value is None:
+            continue
+        current_value = getattr(current_model_cfg, key)
+        if int(checkpoint_value) != int(current_value):
+            raise ValueError(
+                f"Checkpoint/config mismatch for '{key}': checkpoint={checkpoint_value} "
+                f"current={current_value} ({checkpoint_path})"
+            )
+
+
 def resolve_dist_env() -> tuple[int, int, int]:
     world_size = int(os.environ.get("WORLD_SIZE", "1"))
     rank = int(os.environ.get("RANK", "0"))
@@ -480,7 +533,19 @@ def main() -> None:
         default=None,
         help="Enable torch.compile for the training model.",
     )
-    parser.add_argument("--resume", default=None)
+    parser.add_argument(
+        "--resume",
+        default=None,
+        help="Resume full training state from a training checkpoint (.pt).",
+    )
+    parser.add_argument(
+        "--init-checkpoint",
+        default=None,
+        help=(
+            "Initialize model weights from a checkpoint (.pt or .safetensors) and start a new run "
+            "with fresh optimizer / scheduler state."
+        ),
+    )
     parser.add_argument("--max-steps", type=int, default=200000)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument(
@@ -634,6 +699,13 @@ def main() -> None:
     )
     parser.set_defaults(ddp_find_unused_parameters=None)
     args = parser.parse_args()
+    if args.resume is not None and args.init_checkpoint is not None:
+        raise ValueError("--resume and --init-checkpoint are mutually exclusive.")
+    if args.resume is not None and Path(args.resume).suffix.lower() == ".safetensors":
+        raise ValueError(
+            "--resume expects a training checkpoint (.pt). "
+            "Use --init-checkpoint for inference-only .safetensors weights."
+        )
 
     rank, world_size, local_rank, distributed, device = setup_distributed(args.device)
     is_main_process = rank == 0
@@ -992,7 +1064,7 @@ def main() -> None:
             )
 
     raw_model = TextToLatentRFDiT(model_cfg).to(device)
-    if args.resume is None:
+    if args.resume is None and args.init_checkpoint is None:
         if distributed:
             if is_main_process:
                 print(
@@ -1021,6 +1093,13 @@ def main() -> None:
                 model_cfg,
                 local_files_only=False,
             )
+    elif args.init_checkpoint is not None:
+        init_checkpoint_path = Path(args.init_checkpoint).expanduser()
+        init_state, init_model_cfg = _load_model_state_from_checkpoint(init_checkpoint_path)
+        _check_model_config_compatibility(init_checkpoint_path, init_model_cfg, model_cfg)
+        raw_model.load_state_dict(init_state)
+        if is_main_process:
+            print(f"Initialized model weights from: {init_checkpoint_path}")
     train_model = raw_model
     if train_cfg.compile_model:
         if not hasattr(torch, "compile"):

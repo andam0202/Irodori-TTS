@@ -151,7 +151,7 @@ def find_flattening_point(
 class RuntimeKey:
     checkpoint: str
     model_device: str
-    codec_repo: str = "facebook/dacvae-watermarked"
+    codec_repo: str = "Aratako/Semantic-DACVAE-Japanese-32dim"
     model_precision: str = "fp32"
     codec_device: str = "cpu"
     codec_precision: str = "fp32"
@@ -484,7 +484,9 @@ class InferenceRuntime:
                 device=self.model_device,
                 dtype=runtime_dtype,
             )
-            ref_mask = torch.zeros((batch_size, ref_len), dtype=torch.bool, device=self.model_device)
+            ref_mask = torch.zeros(
+                (batch_size, ref_len), dtype=torch.bool, device=self.model_device
+            )
             return ref_latent_patched, ref_mask
 
         if req.ref_wav is None and req.ref_latent is None:
@@ -751,7 +753,9 @@ class InferenceRuntime:
                             std_threshold=float(req.tail_std_threshold),
                             mean_threshold=float(req.tail_mean_threshold),
                         )
-                        flattening_samples = int(flattening_point * int(self.codec.model.hop_length))
+                        flattening_samples = int(
+                            flattening_point * int(self.codec.model.hop_length)
+                        )
                         if flattening_samples > 0:
                             max_samples = min(max_samples, flattening_samples)
                     trimmed_audios.append(audio_i[:, :max_samples])
@@ -766,7 +770,9 @@ class InferenceRuntime:
                             std_threshold=float(req.tail_std_threshold),
                             mean_threshold=float(req.tail_mean_threshold),
                         )
-                        flattening_samples = int(flattening_point * int(self.codec.model.hop_length))
+                        flattening_samples = int(
+                            flattening_point * int(self.codec.model.hop_length)
+                        )
                         if flattening_samples > 0:
                             max_samples = min(max_samples, flattening_samples)
                     trimmed_audios.append(audio_i[:, :max_samples])

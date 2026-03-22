@@ -518,8 +518,7 @@ def _run_worker(
             del AudioSignal
         except Exception as exc:
             raise RuntimeError(
-                "--normalize-db requires audiotools. "
-                "Install audiotools or set --normalize-db none."
+                "--normalize-db requires audiotools. Install audiotools or set --normalize-db none."
             ) from exc
 
     codec = DACVAECodec.load(
@@ -772,7 +771,7 @@ def main() -> None:
         "--output-manifest", required=True, help="Output JSONL path for latent manifest"
     )
     parser.add_argument("--latent-dir", required=True, help="Directory to write latent .pt files")
-    parser.add_argument("--codec-repo", default="facebook/dacvae-watermarked")
+    parser.add_argument("--codec-repo", default="Aratako/Semantic-DACVAE-Japanese-32dim")
     parser.add_argument(
         "--codec-deterministic-encode",
         action=argparse.BooleanOptionalAction,

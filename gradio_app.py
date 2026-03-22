@@ -123,7 +123,7 @@ def _build_runtime_key(
     return RuntimeKey(
         checkpoint=checkpoint_path,
         model_device=str(model_device),
-        codec_repo="facebook/dacvae-watermarked",
+        codec_repo="Aratako/Semantic-DACVAE-Japanese-32dim",
         model_precision=str(model_precision),
         codec_device=str(codec_device),
         codec_precision=str(codec_precision),
@@ -186,7 +186,6 @@ def _run_generation(
     truncation_factor_raw: str,
     rescale_k_raw: str,
     rescale_sigma_raw: str,
-    normalize_ref_audio: bool,
     speaker_kv_scale_raw: str,
     speaker_kv_min_t_raw: str,
     speaker_kv_max_layers_raw: str,
@@ -222,8 +221,8 @@ def _run_generation(
 
     ref_wav = _resolve_ref_wav(uploaded_audio=uploaded_audio)
     no_ref = ref_wav is None
-    ref_normalize_db = -16.0 if bool(normalize_ref_audio) else None
-    ref_ensure_max = bool(normalize_ref_audio)
+    ref_normalize_db = -16.0
+    ref_ensure_max = True
 
     runtime, reloaded = get_cached_runtime(runtime_key)
     stdout_log(f"[gradio] runtime: {'reloaded' if reloaded else 'reused'}")
@@ -309,7 +308,7 @@ def _run_generation(
             audio_updates.append(gr.update(value=out_paths[i], visible=True))
         else:
             audio_updates.append(gr.update(value=None, visible=False))
-    return tuple([*audio_updates, detail_text, timing_text])
+    return (*audio_updates, detail_text, timing_text)
 
 
 def _clear_runtime_cache() -> str:
@@ -361,7 +360,7 @@ def build_ui() -> gr.Blocks:
                 value=codec_precision_choices[0],
                 scale=1,
             )
-            enable_watermark = gr.Checkbox(label="Enable Watermark", value=False, scale=1)
+            enable_watermark = gr.State(False)
 
         with gr.Row():
             load_model_btn = gr.Button("Load Model")
@@ -369,17 +368,10 @@ def build_ui() -> gr.Blocks:
             clear_cache_msg = gr.Textbox(label="Model Status", interactive=False)
 
         text = gr.Textbox(label="Text", lines=4)
-        with gr.Row():
-            uploaded_audio = gr.Audio(
-                label="Reference Audio Upload (optional, blank = no-reference mode)",
-                type="filepath",
-                scale=4,
-            )
-            with gr.Column(scale=1):
-                normalize_ref_audio = gr.Checkbox(
-                    label="Normalize Ref Audio (-16 LUFS + ensure max)",
-                    value=True,
-                )
+        uploaded_audio = gr.Audio(
+            label="Reference Audio Upload (optional, blank = no-reference mode)",
+            type="filepath",
+        )
 
         with gr.Accordion("Sampling", open=True):
             with gr.Row():
@@ -434,7 +426,9 @@ def build_ui() -> gr.Blocks:
         generate_btn = gr.Button("Generate", variant="primary")
 
         out_audios: list[gr.Audio] = []
-        num_rows = (MAX_GRADIO_CANDIDATES + GRADIO_AUDIO_COLS_PER_ROW - 1) // GRADIO_AUDIO_COLS_PER_ROW
+        num_rows = (
+            MAX_GRADIO_CANDIDATES + GRADIO_AUDIO_COLS_PER_ROW - 1
+        ) // GRADIO_AUDIO_COLS_PER_ROW
         with gr.Column():
             for row_idx in range(num_rows):
                 with gr.Row():
@@ -478,7 +472,6 @@ def build_ui() -> gr.Blocks:
                 truncation_factor_raw,
                 rescale_k_raw,
                 rescale_sigma_raw,
-                normalize_ref_audio,
                 speaker_kv_scale_raw,
                 speaker_kv_min_t_raw,
                 speaker_kv_max_layers_raw,

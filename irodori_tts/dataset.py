@@ -100,7 +100,7 @@ class LatentTextDataset(Dataset):
 
         ref_index = index
         speaker_id = item.get("speaker_id")
-        has_speaker = speaker_id is not None
+        has_speaker = False
         if speaker_id is not None:
             speaker_key = str(speaker_id)
             candidates = self.speaker_to_indices.get(speaker_key, [])
@@ -108,6 +108,7 @@ class LatentTextDataset(Dataset):
                 alternatives = [i for i in candidates if i != index]
                 if alternatives:
                     ref_index = random.choice(alternatives)
+                    has_speaker = True
 
         if ref_index == index:
             ref_latent = latent

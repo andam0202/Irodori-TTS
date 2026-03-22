@@ -50,7 +50,7 @@ class DACVAECodec:
     @classmethod
     def load(
         cls,
-        repo_id: str = "facebook/dacvae-watermarked",
+        repo_id: str = "Aratako/Semantic-DACVAE-Japanese-32dim",
         device: str = "cuda",
         dtype: torch.dtype | None = None,
         enable_watermark: bool = False,
@@ -151,6 +151,20 @@ class DACVAECodec:
     ) -> torch.Tensor:
         if target_db is None:
             return wav
+        wav_device = wav.device
+        wav = wav.to(dtype=torch.float32)
+        if wav.ndim == 2:
+            if wav.shape[0] == 1:
+                wav = wav[0]
+            elif wav.shape[1] == 1:
+                wav = wav[:, 0]
+            else:
+                wav = wav.mean(dim=0)
+        if wav.ndim != 1:
+            raise ValueError(
+                "normalize_loudness expects a mono waveform with shape (T,) "
+                f"or singleton-channel (1, T)/(T, 1), got {tuple(wav.shape)}"
+            )
 
         try:
             from audiotools import AudioSignal
@@ -160,13 +174,20 @@ class DACVAECodec:
                 "Install audiotools or disable normalize_db."
             ) from exc
 
-        signal = AudioSignal(wav.unsqueeze(0), int(sample_rate))
+        signal = AudioSignal(wav.unsqueeze(0).unsqueeze(0), int(sample_rate))
         signal.normalize(float(target_db))
         signal.ensure_max_of_audio()
-        normalized = signal.audio_data[0]
+        normalized = signal.audio_data
         if not isinstance(normalized, torch.Tensor):
             normalized = torch.as_tensor(normalized)
-        return normalized.to(dtype=torch.float32, device=wav.device)
+        normalized = normalized.to(dtype=torch.float32, device=wav_device)
+        normalized = normalized.squeeze()
+        if normalized.ndim != 1:
+            raise RuntimeError(
+                "audiotools normalization returned an unexpected waveform shape "
+                f"{tuple(normalized.shape)}"
+            )
+        return normalized
 
     @torch.inference_mode()
     def encode_waveform(
@@ -215,6 +236,12 @@ class DACVAECodec:
                 if effective_normalize_db is not None:
                     wav = self._normalize_loudness(
                         wav, sample_rate=self.sample_rate, target_db=effective_normalize_db
+                    )
+                wav = wav.squeeze()
+                if wav.ndim != 1:
+                    raise RuntimeError(
+                        "Expected mono per-item waveform after preprocessing, "
+                        f"got shape={tuple(wav.shape)}"
                     )
                 if effective_ensure_max:
                     peak = wav.abs().max()

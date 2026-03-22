@@ -1,12 +1,18 @@
 # Irodori-TTS
 
-[![Model](https://img.shields.io/badge/Model-HuggingFace-yellow)](https://huggingface.co/Aratako/Irodori-TTS-500M)
-[![Demo](https://img.shields.io/badge/Demo-HuggingFace%20Space-blue)](https://huggingface.co/spaces/Aratako/Irodori-TTS-500M-Demo)
+[![Model](https://img.shields.io/badge/Model-HuggingFace-yellow)](https://huggingface.co/Aratako/Irodori-TTS-500M-v2)
+[![Demo](https://img.shields.io/badge/Demo-HuggingFace%20Space-blue)](https://huggingface.co/spaces/Aratako/Irodori-TTS-500M-v2-Demo)
 [![License: MIT](https://img.shields.io/badge/Code%20License-MIT-green.svg)](LICENSE)
 
 Training and inference code for **Irodori-TTS**, a Flow Matching-based Text-to-Speech model. The architecture and training design largely follow [Echo-TTS](https://jordandarefsky.com/blog/2025/echo/), using [DACVAE](https://github.com/facebookresearch/dacvae) continuous latents as the generation target.
 
-For model weights and audio samples, please refer to the [model card](https://huggingface.co/Aratako/Irodori-TTS-500M).
+> [!IMPORTANT]
+> `main` tracks the **v2** codebase and is intended for use with the **Irodori-TTS-500M-v2** model release.
+> If you need the previous v1 code, use the `v1` tag.
+> v1 and v2 checkpoints / preprocessing are not compatible across versions.
+> The previous public v1 model is available at [Aratako/Irodori-TTS-500M](https://huggingface.co/Aratako/Irodori-TTS-500M).
+
+For model weights and audio samples, please refer to the [model card](https://huggingface.co/Aratako/Irodori-TTS-500M-v2).
 
 ## Features
 
@@ -23,7 +29,7 @@ The model consists of three main components:
 2. **Reference Latent Encoder**: Encodes patched reference audio latents for speaker/style conditioning via self-attention + SwiGLU layers
 3. **Diffusion Transformer**: Joint-attention DiT blocks with Low-Rank AdaLN (timestep-conditioned adaptive layer normalization), half-RoPE, and SwiGLU MLPs
 
-Audio is represented as continuous latent sequences via the DACVAE codec (128-dim), enabling high-quality 48kHz waveform reconstruction.
+Audio is represented as continuous latent sequences via the codec configured by the checkpoint. v2 uses the 32-dim [Semantic-DACVAE-Japanese-32dim](https://huggingface.co/Aratako/Semantic-DACVAE-Japanese-32dim) codec for 48kHz waveform reconstruction.
 
 ## Installation
 
@@ -41,7 +47,7 @@ uv sync
 
 ```bash
 uv run python infer.py \
-  --hf-checkpoint Aratako/Irodori-TTS-500M \
+  --hf-checkpoint Aratako/Irodori-TTS-500M-v2 \
   --text "今日はいい天気ですね。" \
   --ref-wav path/to/reference.wav \
   --output-wav outputs/sample.wav
@@ -51,7 +57,7 @@ uv run python infer.py \
 
 ```bash
 uv run python infer.py \
-  --hf-checkpoint Aratako/Irodori-TTS-500M \
+  --hf-checkpoint Aratako/Irodori-TTS-500M-v2 \
   --text "今日はいい天気ですね。" \
   --no-ref \
   --output-wav outputs/sample.wav
@@ -64,6 +70,7 @@ uv run python gradio_app.py --server-name 0.0.0.0 --server-port 7860
 ```
 
 Then access the UI at `http://localhost:7860`.
+The hosted v2 demo is available at [Aratako/Irodori-TTS-500M-v2-Demo](https://huggingface.co/spaces/Aratako/Irodori-TTS-500M-v2-Demo).
 
 ## Inference
 
@@ -71,7 +78,7 @@ Then access the UI at `http://localhost:7860`.
 
 ```bash
 uv run python infer.py \
-  --hf-checkpoint Aratako/Irodori-TTS-500M \
+  --hf-checkpoint Aratako/Irodori-TTS-500M-v2 \
   --text "今日はいい天気ですね。" \
   --ref-wav path/to/reference.wav \
   --output-wav outputs/sample.wav
@@ -154,7 +161,7 @@ Single-GPU training:
 
 ```bash
 uv run python train.py \
-  --config configs/train_500m.yaml \
+  --config configs/train_500m_v2.yaml \
   --manifest data/train_manifest.jsonl \
   --output-dir outputs/irodori_tts
 ```
@@ -163,13 +170,37 @@ Multi-GPU DDP training:
 
 ```bash
 uv run torchrun --nproc_per_node 4 train.py \
-  --config configs/train_500m.yaml \
+  --config configs/train_500m_v2.yaml \
   --manifest data/train_manifest.jsonl \
   --output-dir outputs/irodori_tts \
   --device cuda
 ```
 
 Training supports YAML config files with `model` and `train` sections. CLI arguments take precedence over YAML values. See `uv run python train.py --help` for all available options.
+
+#### Fine-Tuning from Released Weights
+
+Start a new training run from released inference weights (`.safetensors`). This initializes only the model weights; optimizer / scheduler state starts fresh.
+
+```bash
+uv run python train.py \
+  --config configs/train_500m_v2.yaml \
+  --manifest data/train_manifest.jsonl \
+  --output-dir outputs/irodori_tts_ft \
+  --init-checkpoint path/to/Irodori-TTS-500M-v2.safetensors
+```
+
+#### Resuming Interrupted Training
+
+Resume an existing training run from a training checkpoint (`.pt`). This restores model, optimizer, scheduler, and step state.
+
+```bash
+uv run python train.py \
+  --config configs/train_500m_v2.yaml \
+  --manifest data/train_manifest.jsonl \
+  --output-dir outputs/irodori_tts \
+  --resume outputs/irodori_tts/checkpoint_0010000.pt
+```
 
 ### 3. Checkpoint Conversion
 
@@ -202,14 +233,15 @@ Irodori-TTS/
 │   └── progress.py             # Training progress tracker
 │
 └── configs/
-    ├── train_500m.yaml          # 500M parameter model config
+    ├── train_500m_v2.yaml       # 500M v2 model config
+    ├── train_500m.yaml          # 500M v1 model config
     └── train_2.5b.yaml          # 2.5B parameter model config
 ```
 
 ## License
 
 - **Code**: [MIT License](LICENSE)
-- **Model Weights**: Please refer to the [model card](https://huggingface.co/Aratako/Irodori-TTS-500M) for licensing details
+- **Model Weights**: Please refer to the [model card](https://huggingface.co/Aratako/Irodori-TTS-500M-v2) for licensing details
 
 ## Acknowledgments
 
