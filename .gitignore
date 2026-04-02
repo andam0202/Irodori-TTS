@@ -228,6 +228,10 @@ outputs/
 *.mp3
 *.flac
 
+# Video files
+*.mp4
+*.avi
+
 # PyTorch / model files (outside tracked dirs)
 *.pt
 *.safetensors
