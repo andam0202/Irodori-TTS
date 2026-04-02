@@ -217,3 +217,17 @@ __marimo__/
 
 gradio_outputs/
 gradio_outputs_voicedesign/
+
+# Large training data / generated files
+data/
+models/
+outputs/
+
+# Audio files
+*.wav
+*.mp3
+*.flac
+
+# PyTorch / model files (outside tracked dirs)
+*.pt
+*.safetensors
