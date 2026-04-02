@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """
-stable-ts による文境界ベース音声分割スクリプト（v3）
+stable-ts による文境界ベース音声分割スクリプト（v5）
 
-v1/v2 からの改善点:
-  - Whisper の VAD セグメント境界を使わない
-  - stable-ts の split_by_punctuation / merge_by_gap / split_by_gap で
-    「文が終わる場所」だけで切り出す
-  - 句読点（。！？）がない箇所は 500ms 超えのギャップで分割
-  - 単語レベルのタイムスタンプで正確に ffmpeg 切り出し
-  - 冒頭ノイズを silenceremove でトリム
+v4 からの改善点:
+  - POST_ROLL を 0.50s → 1.20s に拡大（文末下降イントネーション・気息音を確実にキャプチャ）
+  - areverse+silenceremove+areverse パターンで末尾実無音を自動トリム
+    → 過剰な無音パディングなく、自然な終端になる
+  - 末尾トリム閾値 TAIL_SILENCE_DB=-45dB を先頭トリムと分離して管理
 
 出力:
   <output-dir>/seg_XXXXX.wav  - 分割済み WAV
@@ -28,7 +26,7 @@ import stable_whisper
 
 # ---- デフォルト設定 ----
 DEFAULT_MP3    = Path("data/input/mamimi/tanakamamimi_clipped_full.mp3")
-DEFAULT_OUTDIR = Path("data/mamimi_v3/wavs")
+DEFAULT_OUTDIR = Path("data/mamimi_v5/wavs")
 MODEL_SIZE     = "large-v3"
 
 # 分割・結合パラメータ
@@ -44,10 +42,12 @@ SENTENCE_END_PUNCT = [
 ]
 
 # 抽出設定
-PRE_ROLL     = 0.05   # 秒: 最初の単語の前の余白
-POST_ROLL    = 0.10   # 秒: 最後の単語の後の余白
-SILENCE_DB   = -38    # dB: 冒頭ノイズトリム閾値
-MIN_CLIP_DUR = 1.5    # 秒: 抽出後の実尺がこれ未満なら除外
+PRE_ROLL         = 0.05   # 秒: 最初の単語の前の余白
+POST_ROLL        = 1.20   # 秒: 最後の単語の後の余白（v5: 文末イントネーション・気息音対策）
+SILENCE_DB       = -38    # dB: 先頭ノイズトリム閾値
+TAIL_SILENCE_DB  = -45    # dB: 末尾ノイズトリム閾値（より保守的）
+TAIL_SILENCE_DUR = 0.15   # 秒: 末尾トリム判定の最小無音継続時間
+MIN_CLIP_DUR     = 1.5    # 秒: 抽出後の実尺がこれ未満なら除外
 MIN_TEXT     = 3      # 文字数: テキストがこれ未満なら除外
 
 
@@ -82,10 +82,6 @@ def transcribe_and_segment(mp3_path: Path) -> stable_whisper.WhisperResult:
     result.split_by_duration(MAX_DUR)
     print(f"[regroup④] after split_by_duration({MAX_DUR}s): {len(result.segments)} segs")
 
-    # ⑤ MIN_DUR 未満のセグメントを隣と結合（最後の仕上げ）
-    result.merge_by_gap(MIN_DUR, max_words=None)
-    print(f"[regroup⑤] after merge_by_gap({MIN_DUR}s) final: {len(result.segments)} segs")
-
     return result
 
 
@@ -111,11 +107,22 @@ def extract_wav(mp3_path: Path, start: float, end: float, out_path: Path) -> boo
         "-ac", "1",
         "-ar", "44100",
         "-af", (
+            # ① 先頭無音トリム
             f"silenceremove="
             f"start_periods=1:"
             f"start_threshold={SILENCE_DB}dB:"
             f"start_duration=0.02:"
-            f"detection=rms"
+            f"detection=rms,"
+            # ② 反転 → 末尾が先頭になる
+            f"areverse,"
+            # ③ 末尾無音トリム（元の末尾を削る）
+            f"silenceremove="
+            f"start_periods=1:"
+            f"start_threshold={TAIL_SILENCE_DB}dB:"
+            f"start_duration={TAIL_SILENCE_DUR}:"
+            f"detection=rms,"
+            # ④ 再反転（元の向きに戻す）
+            f"areverse"
         ),
         str(out_path),
     ]

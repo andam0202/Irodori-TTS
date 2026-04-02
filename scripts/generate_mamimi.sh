@@ -16,8 +16,8 @@
 
 set -e
 
-CHECKPOINT="data/lora/mamimi_lora/mamimi_best.safetensors"
-REF_WAV="data/mamimi/wavs/seg_00338.wav"
+CHECKPOINT="data/lora/mamimi_v5_lora/mamimi_v5_best.safetensors"
+REF_WAV="data/mamimi_v5/wavs/seg_00225.wav"
 OUTPUT_DIR="outputs/mamimi_samples"
 NO_REF=false
 SEED_ARG=""
