@@ -13,9 +13,9 @@ data/mamimi/wavs/metadata.csv
   ↓ Step 2: DACVAE レイテント変換（prepare_manifest.py）
 data/mamimi/latents/*.pt + data/mamimi/manifest.jsonl
   ↓ Step 3: LoRA 微調整（train.py）
-outputs/mamimi_lora/checkpoint_final.pt
+data/lora/mamimi_lora/checkpoint_final.pt
   ↓ Step 4: チェックポイント変換
-outputs/mamimi_lora/checkpoint_final.safetensors
+data/lora/mamimi_lora/mamimi_final.safetensors
   ↓ Step 5: 推論（infer.py）
 outputs/mamimi_output.wav
 ```
@@ -203,18 +203,18 @@ print('Downloaded:', path)
 uv run python train.py \
   --config configs/train_mamimi_lora.yaml \
   --manifest data/mamimi/manifest.jsonl \
-  --output-dir outputs/mamimi_lora/ \
+  --output-dir data/lora/mamimi_lora/ \
   --init-checkpoint models/base/model.safetensors
 ```
 
 学習ログの確認（別ターミナル）:
 ```bash
-tail -f outputs/mamimi_lora/train.log
+tail -f data/lora/mamimi_lora/train.log
 ```
 
 > **所要時間目安**:
 > - 3000ステップ、バッチ4 → RTX 5070 Ti で約30〜60分
-> - 途中で中断した場合は `--init-checkpoint outputs/mamimi_lora/checkpoint_stepXXXX.pt` で再開可能
+> - 途中で中断した場合は `--resume data/lora/mamimi_lora/checkpoint_stepXXXX` で再開可能
 
 ---
 
@@ -223,17 +223,19 @@ tail -f outputs/mamimi_lora/train.log
 LoRA アダプタをベースモデルにマージして推論用 safetensors を生成する。
 
 ```bash
-# 最終チェックポイントをマージ変換
+# 最終チェックポイントをマージ変換（LoRA アダプタディレクトリを指定）
 uv run python convert_checkpoint_to_safetensors.py \
-  outputs/mamimi_lora/checkpoint_final.pt
+  data/lora/mamimi_lora/checkpoint_final
 
-# → outputs/mamimi_lora/checkpoint_final.safetensors が生成される
+# → data/lora/mamimi_lora/mamimi_final.safetensors が生成される
 ```
 
-検証中のチェックポイントを試したい場合:
+バリデーション損失が最も低いチェックポイントを変換する場合:
 ```bash
+# 例: val_loss が最小のチェックポイントディレクトリ名を確認してから実行
+ls data/lora/mamimi_lora/checkpoint_best_*
 uv run python convert_checkpoint_to_safetensors.py \
-  outputs/mamimi_lora/checkpoint_step2700.pt
+  data/lora/mamimi_lora/checkpoint_best_val_loss_XXXXXX_X.XXXXXX
 ```
 
 ---
@@ -244,7 +246,7 @@ uv run python convert_checkpoint_to_safetensors.py \
 
 ```bash
 uv run python infer.py \
-  --checkpoint outputs/mamimi_lora/checkpoint_final.safetensors \
+  --checkpoint data/lora/mamimi_lora/mamimi_final.safetensors \
   --text "こんにちは！今日もよろしくお願いします！" \
   --no-ref \
   --output-wav outputs/mamimi_test_noref.wav \
@@ -257,7 +259,7 @@ uv run python infer.py \
 
 ```bash
 uv run python infer.py \
-  --checkpoint outputs/mamimi_lora/checkpoint_final.safetensors \
+  --checkpoint data/lora/mamimi_lora/mamimi_final.safetensors \
   --text "今日のゲームはめちゃくちゃ楽しかったですよ。" \
   --ref-wav data/mamimi/wavs/seg_00010.wav \
   --cfg-scale-speaker 2.5 \
@@ -269,7 +271,7 @@ uv run python infer.py \
 
 ```bash
 uv run python infer.py \
-  --checkpoint outputs/mamimi_lora/checkpoint_final.safetensors \
+  --checkpoint data/lora/mamimi_lora/mamimi_final.safetensors \
   --text "ありがとうございます！すごく嬉しいです！" \
   --ref-wav data/mamimi/wavs/seg_00010.wav \
   --num-candidates 5 \
@@ -349,12 +351,15 @@ models/
     └── model.safetensors                # ベースモデル
 configs/
 └── train_mamimi_lora.yaml               # LoRA 学習設定
-outputs/
-└── mamimi_lora/
-    ├── checkpoint_step300.pt
-    ├── ...
-    ├── checkpoint_final.pt
-    └── checkpoint_final.safetensors     # 推論用（変換後）
+data/
+└── lora/
+    └── mamimi_lora/
+        ├── checkpoint_final/            # LoRA アダプタ（最終）
+        ├── checkpoint_best_val_loss_*/  # バリデーション最良チェックポイント
+        ├── mamimi_final.safetensors     # 推論用（変換後・最終）
+        └── mamimi_best.safetensors      # 推論用（変換後・最良）
 scripts/
-└── transcribe.py                        # 文字起こしスクリプト
+├── split_and_transcribe.py              # 音声分割 + 文字起こし
+├── encode_latents.py                    # DACVAE レイテント変換
+└── generate_mamimi.sh                   # 摩美々音声生成スクリプト
 ```
