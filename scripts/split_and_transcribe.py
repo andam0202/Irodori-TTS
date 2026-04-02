@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Whisper のセグメントタイムスタンプを使って音声を自然な文単位に分割し、
-同時に文字起こしを行い metadata.csv を生成するスクリプト。
+stable-ts による文境界ベース音声分割スクリプト（v3）
 
-改善点（v2）:
-  - 単語レベルのタイムスタンプを境界に使用（より正確）
-  - ffmpeg silenceremove で冒頭ノイズ・無音をトリム
-  - 抽出後の実尺チェックで短すぎるクリップを除外
-  - 出力先を --output-dir で変更可能
+v1/v2 からの改善点:
+  - Whisper の VAD セグメント境界を使わない
+  - stable-ts の split_by_punctuation / merge_by_gap / split_by_gap で
+    「文が終わる場所」だけで切り出す
+  - 句読点（。！？）がない箇所は 500ms 超えのギャップで分割
+  - 単語レベルのタイムスタンプで正確に ffmpeg 切り出し
+  - 冒頭ノイズを silenceremove でトリム
 
 出力:
   <output-dir>/seg_XXXXX.wav  - 分割済み WAV
@@ -21,149 +22,87 @@ import csv
 import subprocess
 import sys
 import wave
-from dataclasses import dataclass, field
 from pathlib import Path
 
-from faster_whisper import WhisperModel
+import stable_whisper
 
 # ---- デフォルト設定 ----
 DEFAULT_MP3    = Path("data/input/mamimi/tanakamamimi_clipped_full.mp3")
-DEFAULT_OUTDIR = Path("data/mamimi_v2/wavs")
+DEFAULT_OUTDIR = Path("data/mamimi_v3/wavs")
 MODEL_SIZE     = "large-v3"
 
-MIN_DUR        = 2.0    # 秒: これ未満のセグメントは結合
-MAX_DUR        = 15.0   # 秒: これ超えは単語境界で再分割
-MIN_TEXT       = 3      # 文字数: これ未満は除外
-MIN_CLIP_DUR   = 1.5    # 秒: silenceremove 後の実尺がこれ未満なら除外
-PRE_ROLL       = 0.05   # 秒: 最初の単語の前に少しだけ余白を取る
-POST_ROLL      = 0.10   # 秒: 最後の単語の後に余白を取る
-SILENCE_DB     = -38    # dB: これ以下を冒頭の無音として除去する閾値
+# 分割・結合パラメータ
+MERGE_GAP  = 0.15   # 秒: これ未満のギャップは同一発話（息継ぎ）として結合
+SPLIT_GAP  = 0.5    # 秒: これ超えのギャップは発話の切れ目として分割
+MIN_DUR    = 2.0    # 秒: これ未満のセグメントは隣と結合
+MAX_DUR    = 12.0   # 秒: これ超えは強制分割
+
+# 句読点リスト（日本語・英語）
+SENTENCE_END_PUNCT = [
+    '。', '？', '！', '?', '!',
+    ('…', ''), ('♪', ''),
+]
+
+# 抽出設定
+PRE_ROLL     = 0.05   # 秒: 最初の単語の前の余白
+POST_ROLL    = 0.10   # 秒: 最後の単語の後の余白
+SILENCE_DB   = -38    # dB: 冒頭ノイズトリム閾値
+MIN_CLIP_DUR = 1.5    # 秒: 抽出後の実尺がこれ未満なら除外
+MIN_TEXT     = 3      # 文字数: テキストがこれ未満なら除外
 
 
-@dataclass
-class Segment:
-    start: float
-    end:   float
-    text:  str
-    words: list = field(default_factory=list)
+def transcribe_and_segment(mp3_path: Path) -> stable_whisper.WhisperResult:
+    """stable-ts で転写し、文境界ベースで再セグメント化する。"""
+    print(f"[stable-ts] loading model: {MODEL_SIZE}")
+    model = stable_whisper.load_model(MODEL_SIZE, device="cuda")
 
-    @property
-    def duration(self) -> float:
-        return self.end - self.start
-
-
-def transcribe(mp3_path: Path, model_size: str) -> list[Segment]:
-    print(f"[whisper] loading model: {model_size}")
-    model = WhisperModel(model_size, device="cuda", compute_type="float16")
-
-    print(f"[whisper] transcribing: {mp3_path}")
-    raw_segments, info = model.transcribe(
+    print(f"[stable-ts] transcribing: {mp3_path}")
+    result = model.transcribe(
         str(mp3_path),
         language="ja",
-        beam_size=5,
         word_timestamps=True,
-        vad_filter=True,
-        vad_parameters={
-            "min_silence_duration_ms": 500,   # 前回300→500msに延長し境界を明確化
-            "speech_pad_ms": 30,              # 発話検出パディング
-        },
+        verbose=False,
     )
-    print(f"[whisper] detected language: {info.language} (prob={info.language_probability:.2f})")
+    raw_count = len(result.segments)
+    print(f"[stable-ts] raw segments: {raw_count}")
 
-    segments = []
-    for s in raw_segments:
-        words = [(w.start, w.end, w.word) for w in (s.words or [])]
-        segments.append(Segment(start=s.start, end=s.end, text=s.text.strip(), words=words))
-        print(f"  [{s.start:.1f}→{s.end:.1f}] {s.text.strip()[:60]}")
+    # ① 150ms 以下のギャップは同一発話として結合（発話内の息継ぎ対策）
+    result.merge_by_gap(MERGE_GAP)
+    print(f"[regroup①] after merge_by_gap({MERGE_GAP}s): {len(result.segments)} segs")
 
-    print(f"[whisper] raw segments: {len(segments)}")
-    return segments
+    # ② 句読点（。！？）で分割 — 文が確実に終わった箇所
+    result.split_by_punctuation(SENTENCE_END_PUNCT)
+    print(f"[regroup②] after split_by_punctuation: {len(result.segments)} segs")
 
+    # ③ 500ms 超えのギャップで分割 — 句読点がない発話間隔
+    result.split_by_gap(SPLIT_GAP)
+    print(f"[regroup③] after split_by_gap({SPLIT_GAP}s): {len(result.segments)} segs")
 
-def merge_short(segments: list[Segment], min_dur: float) -> list[Segment]:
-    """MIN_DUR 未満のセグメントを次のセグメントと結合する。"""
-    merged: list[Segment] = []
-    buf: Segment | None = None
+    # ④ MAX_DUR を超えるセグメントを強制分割
+    result.split_by_duration(MAX_DUR)
+    print(f"[regroup④] after split_by_duration({MAX_DUR}s): {len(result.segments)} segs")
 
-    for seg in segments:
-        if buf is None:
-            buf = Segment(seg.start, seg.end, seg.text, list(seg.words))
-        else:
-            buf.end   = seg.end
-            buf.text  = buf.text + seg.text
-            buf.words = buf.words + seg.words
-
-        if buf.duration >= min_dur:
-            merged.append(buf)
-            buf = None
-
-    if buf is not None and buf.duration > 0:
-        if merged:
-            last = merged[-1]
-            last.end   = buf.end
-            last.text  = last.text + buf.text
-            last.words = last.words + buf.words
-        else:
-            merged.append(buf)
-
-    return merged
-
-
-def split_long(segments: list[Segment], max_dur: float) -> list[Segment]:
-    """MAX_DUR 超えのセグメントを単語境界で再分割する。"""
-    result: list[Segment] = []
-
-    for seg in segments:
-        if seg.duration <= max_dur or not seg.words:
-            result.append(seg)
-            continue
-
-        chunk_start = seg.start
-        chunk_words: list = []
-        chunk_text  = ""
-
-        for (ws, we, wt) in seg.words:
-            chunk_words.append((ws, we, wt))
-            chunk_text += wt
-            if (we - chunk_start) >= max_dur:
-                result.append(Segment(chunk_start, we, chunk_text.strip(), list(chunk_words)))
-                chunk_start = we
-                chunk_words = []
-                chunk_text  = ""
-
-        if chunk_words:
-            result.append(Segment(chunk_start, chunk_words[-1][1], chunk_text.strip(), chunk_words))
+    # ⑤ MIN_DUR 未満のセグメントを隣と結合（最後の仕上げ）
+    result.merge_by_gap(MIN_DUR, max_words=None)
+    print(f"[regroup⑤] after merge_by_gap({MIN_DUR}s) final: {len(result.segments)} segs")
 
     return result
 
 
-def get_precise_bounds(seg: Segment) -> tuple[float, float]:
-    """
-    単語レベルのタイムスタンプから正確な開始・終了時刻を計算する。
-    単語情報がある場合は seg.start/end よりも精度が高い。
-    """
-    if seg.words:
-        word_start = seg.words[0][0]
-        word_end   = seg.words[-1][1]
-        # 最初の単語の少し前から取ることで、自然な発話開始を保持
-        start = max(0.0, word_start - PRE_ROLL)
-        end   = word_end + POST_ROLL
+def get_bounds(seg: stable_whisper.result.Segment) -> tuple[float, float]:
+    """単語レベルのタイムスタンプから正確な開始・終了を返す。"""
+    if seg.has_words:
+        words = seg.words
+        start = max(0.0, words[0].start - PRE_ROLL)
+        end   = words[-1].end + POST_ROLL
     else:
         start = seg.start
         end   = seg.end
     return start, end
 
 
-def extract_wav(
-    mp3_path: Path,
-    start: float,
-    end: float,
-    out_path: Path,
-) -> bool:
-    """
-    ffmpeg で区間を切り出し、silenceremove で冒頭ノイズをトリムする。
-    silenceremove により実際の発話開始から記録される。
-    """
+def extract_wav(mp3_path: Path, start: float, end: float, out_path: Path) -> bool:
+    """ffmpeg で区間を切り出し、冒頭ノイズを silenceremove でトリムする。"""
     cmd = [
         "ffmpeg", "-y",
         "-ss", f"{start:.3f}",
@@ -194,11 +133,9 @@ def get_wav_duration(path: Path) -> float:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="音声分割 + 文字起こし（改良版）")
-    parser.add_argument("--input-mp3",  type=Path, default=DEFAULT_MP3,
-                        help="入力 MP3 ファイル")
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTDIR,
-                        help="WAV と metadata.csv の出力先ディレクトリ")
+    parser = argparse.ArgumentParser(description="音声分割 + 文字起こし（stable-ts v3）")
+    parser.add_argument("--input-mp3",  type=Path, default=DEFAULT_MP3)
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTDIR)
     args = parser.parse_args()
 
     mp3_path = args.input_mp3
@@ -209,58 +146,50 @@ def main() -> None:
         sys.exit(1)
 
     wavs_dir.mkdir(parents=True, exist_ok=True)
-    print(f"[config] input  : {mp3_path}")
-    print(f"[config] output : {wavs_dir}")
-    print(f"[config] silence trim threshold: {SILENCE_DB} dB")
+    print(f"[config] input      : {mp3_path}")
+    print(f"[config] output     : {wavs_dir}")
+    print(f"[config] merge_gap  : {MERGE_GAP}s  split_gap: {SPLIT_GAP}s")
+    print(f"[config] min_dur    : {MIN_DUR}s  max_dur: {MAX_DUR}s")
 
-    # 1. 転写
-    segments = transcribe(mp3_path, MODEL_SIZE)
+    # 転写 + セグメント化
+    result = transcribe_and_segment(mp3_path)
 
-    # 2. 短いセグメントを結合
-    segments = merge_short(segments, MIN_DUR)
-    print(f"[merge]  after merge_short: {len(segments)} segments")
-
-    # 3. 長すぎるセグメントを再分割
-    segments = split_long(segments, MAX_DUR)
-    print(f"[split]  after split_long: {len(segments)} segments")
-
-    # 4. WAV 切り出し + metadata.csv 書き出し
+    # WAV 切り出し + metadata.csv 書き出し
     csv_path = wavs_dir / "metadata.csv"
-    skipped  = 0
     written  = 0
+    skipped  = 0
 
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["file_name", "transcription"])
         writer.writeheader()
 
-        for i, seg in enumerate(segments):
-            if len(seg.text) < MIN_TEXT:
+        for i, seg in enumerate(result.segments):
+            text = seg.text.strip()
+            if len(text) < MIN_TEXT:
                 skipped += 1
                 continue
 
             fname    = f"seg_{i:05d}.wav"
             out_path = wavs_dir / fname
 
-            # 単語タイムスタンプを使って正確な境界を取得
-            start, end = get_precise_bounds(seg)
+            start, end = get_bounds(seg)
 
             if not extract_wav(mp3_path, start, end, out_path):
                 print(f"  [warn] ffmpeg failed: {fname}", file=sys.stderr)
                 skipped += 1
                 continue
 
-            # silenceremove 後の実尺チェック
             actual_dur = get_wav_duration(out_path)
             if actual_dur < MIN_CLIP_DUR:
                 out_path.unlink(missing_ok=True)
                 skipped += 1
                 continue
 
-            writer.writerow({"file_name": fname, "transcription": seg.text})
+            writer.writerow({"file_name": fname, "transcription": text})
             written += 1
 
             if written % 50 == 0:
-                print(f"  [{written}] {fname} ({actual_dur:.1f}s): {seg.text[:50]}")
+                print(f"  [{written}] {fname} ({actual_dur:.1f}s): {text[:50]}")
 
     print(f"\n[done] written={written}, skipped={skipped}")
     print(f"[done] metadata.csv -> {csv_path}")
