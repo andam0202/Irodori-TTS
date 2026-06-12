@@ -5,6 +5,8 @@ import argparse
 import math
 from pathlib import Path
 
+import torch
+
 from huggingface_hub import hf_hub_download
 
 from irodori_tts.inference_runtime import (
@@ -338,6 +340,25 @@ def main() -> None:
     parser.add_argument("--tail-std-threshold", type=float, default=0.05)
     parser.add_argument("--tail-mean-threshold", type=float, default=0.1)
     parser.add_argument(
+        "--tail-margin-ms", type=float, default=100.0,
+        help=(
+            "Margin (ms) added after the detected flattening point before trimming. "
+            "Prevents clipping the natural decay of the final phoneme (default: 100)."
+        ),
+    )
+    parser.add_argument(
+        "--tail-fade-ms", type=float, default=0.0,
+        help=(
+            "Apply a cosine fade-out over the last N ms of the output. "
+            "Softens abrupt endings when the model does not decay the final phoneme "
+            "(default: 0 = disabled)."
+        ),
+    )
+    parser.add_argument(
+        "--tail-pad-out-ms", type=float, default=0.0,
+        help="Append N ms of silence to the output after fading (default: 0 = disabled).",
+    )
+    parser.add_argument(
         "--show-timings",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -466,21 +487,56 @@ def main() -> None:
             tail_window_size=int(args.tail_window_size),
             tail_std_threshold=float(args.tail_std_threshold),
             tail_mean_threshold=float(args.tail_mean_threshold),
+            tail_margin_ms=float(args.tail_margin_ms),
             lora_adapter=None if args.lora_adapter is None else str(args.lora_adapter),
         ),
         log_fn=None,
     )
 
+    def _find_speech_end(audio: torch.Tensor, threshold_db: float = -45.0) -> int:
+        """末尾から走査し、発話が終わるサンプル位置を返す（20ms RMS 窓）。"""
+        mono = audio.mean(dim=0) if audio.dim() > 1 else audio
+        win = max(1, int(0.02 * result.sample_rate))
+        thr = 10.0 ** (threshold_db / 20.0)
+        n = mono.shape[-1]
+        for end in range(n, 0, -win):
+            seg = mono[max(0, end - win): end]
+            if seg.pow(2).mean().sqrt().item() > thr:
+                return end
+        return n
+
+    def _postprocess_tail(audio: torch.Tensor) -> torch.Tensor:
+        fade_n = int(float(args.tail_fade_ms) / 1000.0 * result.sample_rate)
+        if fade_n > 0 and audio.shape[-1] > fade_n:
+            # モデルが語尾の減衰を生成しきれず高音量のまま無音に落ちる「崖」を、
+            # 発話終端の位置に減衰カーブを掛けることで自然な余韻に変える
+            speech_end = _find_speech_end(audio)
+            fade_start = max(0, speech_end - fade_n)
+            audio = audio.clone()
+            seg_len = speech_end - fade_start
+            if seg_len > 0:
+                fade = torch.cos(
+                    torch.linspace(0, math.pi / 2, seg_len, dtype=audio.dtype)
+                ) ** 2
+                audio[..., fade_start:speech_end] = audio[..., fade_start:speech_end] * fade
+                audio[..., speech_end:] = 0.0
+                audio = audio[..., : speech_end]
+        pad_n = int(float(args.tail_pad_out_ms) / 1000.0 * result.sample_rate)
+        if pad_n > 0:
+            pad = torch.zeros((*audio.shape[:-1], pad_n), dtype=audio.dtype)
+            audio = torch.cat([audio, pad], dim=-1)
+        return audio
+
     print(f"[seed] used_seed: {result.used_seed}")
     if int(args.num_candidates) == 1:
-        out_path = save_wav(args.output_wav, result.audio, result.sample_rate)
+        out_path = save_wav(args.output_wav, _postprocess_tail(result.audio), result.sample_rate)
         print(f"Saved: {out_path}")
     else:
         base_path = Path(str(args.output_wav))
         suffix = base_path.suffix if base_path.suffix else ".wav"
         for i, audio in enumerate(result.audios, start=1):
             out_path = base_path.with_name(f"{base_path.stem}_{i:03d}{suffix}")
-            saved = save_wav(out_path, audio, result.sample_rate)
+            saved = save_wav(out_path, _postprocess_tail(audio), result.sample_rate)
             print(f"Saved[{i}]: {saved}")
     if args.show_timings:
         _print_timings(result.stage_timings, result.total_to_decode)

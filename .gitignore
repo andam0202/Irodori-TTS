@@ -219,3 +219,8 @@ gradio_outputs/
 gradio_outputs_voicedesign/
 outputs/
 data/
+
+# 隔離ツール環境（f5-tts / applio / seed-vc / audio-separator の venv・クローン・モデル, 数十GB）
+tools/
+# ベースモデル等の大容量バイナリ
+models/

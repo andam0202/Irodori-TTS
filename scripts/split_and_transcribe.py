@@ -40,26 +40,44 @@ SENTENCE_END_PUNCT = [
     '。', '？', '！', '?', '!',
     ('…', ''), ('♪', ''),
 ]
+# 英語用の文末句読点（--language en 指定時に使用）。日本語の全角記号は出ないため
+# ピリオド・疑問符・感嘆符で分割する。
+SENTENCE_END_PUNCT_EN = ['.', '?', '!', ('…', '')]
 
 # 抽出設定
 PRE_ROLL         = 0.05   # 秒: 最初の単語の前の余白
 POST_ROLL        = 1.20   # 秒: 最後の単語の後の余白（v5: 文末イントネーション・気息音対策）
 SILENCE_DB       = -38    # dB: 先頭ノイズトリム閾値
-TAIL_SILENCE_DB  = -45    # dB: 末尾ノイズトリム閾値（より保守的）
+# 末尾トリムは -60dB。-45dB だと Demucs 処理音声（発話間がほぼデジタル無音）では
+# 語尾の自然減衰・無声子音まで削られ、生成音声の語尾が途切れる原因になる（diana_v2 で実害）
+TAIL_SILENCE_DB  = -60    # dB: 末尾ノイズトリム閾値（より保守的）
 TAIL_SILENCE_DUR = 0.15   # 秒: 末尾トリム判定の最小無音継続時間
+TAIL_PAD         = 0.15   # 秒: トリム後に付加する無音（クリップを静かに終わらせる）
 MIN_CLIP_DUR     = 1.5    # 秒: 抽出後の実尺がこれ未満なら除外
 MIN_TEXT     = 3      # 文字数: テキストがこれ未満なら除外
 
 
-def transcribe_and_segment(mp3_path: Path) -> stable_whisper.WhisperResult:
+def transcribe_and_segment(
+    mp3_path: Path, backend: str = "openai", device: str = "cuda",
+    language: str = "ja",
+) -> stable_whisper.WhisperResult:
     """stable-ts で転写し、文境界ベースで再セグメント化する。"""
-    print(f"[stable-ts] loading model: {MODEL_SIZE}")
-    model = stable_whisper.load_model(MODEL_SIZE, device="cuda")
+    sentence_punct = SENTENCE_END_PUNCT_EN if language == "en" else SENTENCE_END_PUNCT
+    print(f"[stable-ts] loading model: {MODEL_SIZE} (backend={backend}, device={device})")
+    if backend == "faster":
+        # CTranslate2 形式（HF: Systran/faster-whisper-large-v3）を使用。
+        # openai 形式の .pt（2.9GB）が未キャッシュでも HF キャッシュを流用できる
+        compute_type = "float16" if device == "cuda" else "int8"
+        model = stable_whisper.load_faster_whisper(
+            MODEL_SIZE, device=device, compute_type=compute_type,
+        )
+    else:
+        model = stable_whisper.load_model(MODEL_SIZE, device=device)
 
     print(f"[stable-ts] transcribing: {mp3_path}")
     result = model.transcribe(
         str(mp3_path),
-        language="ja",
+        language=language,
         word_timestamps=True,
         verbose=False,
     )
@@ -71,7 +89,7 @@ def transcribe_and_segment(mp3_path: Path) -> stable_whisper.WhisperResult:
     print(f"[regroup①] after merge_by_gap({MERGE_GAP}s): {len(result.segments)} segs")
 
     # ② 句読点（。！？）で分割 — 文が確実に終わった箇所
-    result.split_by_punctuation(SENTENCE_END_PUNCT)
+    result.split_by_punctuation(sentence_punct)
     print(f"[regroup②] after split_by_punctuation: {len(result.segments)} segs")
 
     # ③ 500ms 超えのギャップで分割 — 句読点がない発話間隔
@@ -122,7 +140,9 @@ def extract_wav(mp3_path: Path, start: float, end: float, out_path: Path) -> boo
             f"start_duration={TAIL_SILENCE_DUR}:"
             f"detection=rms,"
             # ④ 再反転（元の向きに戻す）
-            f"areverse"
+            f"areverse,"
+            # ⑤ 末尾に短い無音を付加（ブツ切り終端の防止）
+            f"apad=pad_dur={TAIL_PAD}"
         ),
         str(out_path),
     ]
@@ -143,6 +163,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="音声分割 + 文字起こし（stable-ts v3）")
     parser.add_argument("--input-mp3",  type=Path, default=DEFAULT_MP3)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTDIR)
+    parser.add_argument(
+        "--backend", choices=["openai", "faster"], default="openai",
+        help="Whisper バックエンド（faster: CTranslate2 形式の HF キャッシュを使用）",
+    )
+    parser.add_argument("--device", default="cuda", help="推論デバイス (cuda/cpu)")
+    parser.add_argument(
+        "--language", default="ja",
+        help="文字起こし言語コード（ja=日本語デフォルト, en=英語。文末分割記号も切替）",
+    )
     args = parser.parse_args()
 
     mp3_path = args.input_mp3
@@ -159,7 +188,9 @@ def main() -> None:
     print(f"[config] min_dur    : {MIN_DUR}s  max_dur: {MAX_DUR}s")
 
     # 転写 + セグメント化
-    result = transcribe_and_segment(mp3_path)
+    result = transcribe_and_segment(
+        mp3_path, backend=args.backend, device=args.device, language=args.language,
+    )
 
     # WAV 切り出し + metadata.csv 書き出し
     csv_path = wavs_dir / "metadata.csv"

@@ -232,6 +232,9 @@ class SamplingRequest:
     tail_window_size: int = 20
     tail_std_threshold: float = 0.05
     tail_mean_threshold: float = 0.1
+    # 平坦化ポイントでのハードカットは語尾の減衰（latent的にはほぼ平坦）まで
+    # 削ってしまうため、カット位置に余裕を持たせる
+    tail_margin_ms: float = 100.0
     lora_adapter: str | None = None
 
 
@@ -1174,6 +1177,11 @@ class InferenceRuntime:
                             flattening_point * int(self.codec.model.hop_length)
                         )
                         if flattening_samples > 0:
+                            flattening_samples += int(
+                                float(req.tail_margin_ms)
+                                / 1000.0
+                                * float(self.codec.sample_rate)
+                            )
                             max_samples = min(max_samples, flattening_samples)
                     trimmed_audios.append(audio_i[:, :max_samples])
             else:
@@ -1191,6 +1199,11 @@ class InferenceRuntime:
                             flattening_point * int(self.codec.model.hop_length)
                         )
                         if flattening_samples > 0:
+                            flattening_samples += int(
+                                float(req.tail_margin_ms)
+                                / 1000.0
+                                * float(self.codec.sample_rate)
+                            )
                             max_samples = min(max_samples, flattening_samples)
                     trimmed_audios.append(audio_i[:, :max_samples])
             stage_sec = _measure_end(self.model_device, t0, self.codec_device)
