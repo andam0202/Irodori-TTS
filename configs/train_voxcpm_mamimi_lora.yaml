@@ -1,0 +1,40 @@
+# VoxCPM2 LoRA fine-tune for mamimi (田中まみみ)
+# base: openbmb/VoxCPM2 (2B, ゼロショットクローン強化), data: mamimi_v6 (958 train)
+# 実行: bash scripts/voxcpm.sh train --config_path <このファイルの絶対パス>
+#
+# 注意: val_manifest を空にして val 音声生成（TensorBoard 用 AudioVAE 追加ロード + mel 図）を
+# スキップ。これを有効にすると GPU メモリ 15.9GB/16.3GB まで張り付き学習が ~27s/iter に
+# 落ちる（step 0 でハング状態）。LoRA 適応には val 不要。
+# 2B モデル × RTX 5070 Ti 16GB で ~7s/iter。300 iters ≈ 40分（mamimi 958件 × effective batch8 ≈ 2.5 epoch）。
+pretrained_path: /mnt/c/Users/mao0202/Documents/GitHub/Irodori-TTS/tools/voxcpm/models/VoxCPM2
+train_manifest: /mnt/c/Users/mao0202/Documents/GitHub/Irodori-TTS/data/mamimi_v6/voxcpm_train.jsonl
+val_manifest: ""           # val 音声生成をスキップ（メモリ・速度の主ボトルネックを除去）
+sample_rate: 16000        # AudioVAE encoder input rate; must match audio_vae_config.sample_rate
+out_sample_rate: 48000
+batch_size: 1             # メモリ余裕化（RTX 5070 Ti 16GB で安全側）
+grad_accum_steps: 8       # effective batch size = 1 × 8 = 8（LoRA なら十分）
+num_workers: 2
+num_iters: 300            # 2B×16GB で ~7s/iter。300 iters ≈ 40分（2.5 epoch 相当）
+log_interval: 25
+valid_interval: 300
+save_interval: 150        # step 150 / 300 を保存
+learning_rate: 0.0001
+weight_decay: 0.01
+warmup_steps: 30          # 300 iters に対して短めに
+max_steps: 300
+max_batch_tokens: 8192
+max_grad_norm: 1.0        # gradient clipping max norm
+save_path: /mnt/c/Users/mao0202/Documents/GitHub/Irodori-TTS/data/output/voxcpm_lora/checkpoints
+tensorboard: /mnt/c/Users/mao0202/Documents/GitHub/Irodori-TTS/data/output/voxcpm_lora/logs
+lambdas:
+  loss/diff: 1.0
+  loss/stop: 1.0
+
+# LoRA configuration (VoxCPM2: LM + DiT を適応、proj は off)
+lora:
+  enable_lm: true
+  enable_dit: true
+  enable_proj: false
+  r: 32
+  alpha: 32
+  dropout: 0.0

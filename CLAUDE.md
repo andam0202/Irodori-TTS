@@ -112,6 +112,28 @@ Irodori-TTS は日本語特化。**英語の話者モデルは F5-TTS を使う*
 - 役割分担: 日本語 + NSFW/感情表現（キャプション・絵文字制御）= Irodori-TTS、
   英語のクリーンな台詞 = F5-TTS（F5 は非言語発声・スタイル制御が弱い）
 
+## 多言語 TTS / ボイスクローン（VoxCPM2）
+Irodori-TTS（日本語特化・600M）の対抗馬。OpenBMB の 2B **tokenizer-free** モデルで、
+30言語対応TTS、Voice Design（テキスト記述からボイス作成）、ゼロショット/Ultimate ボイスクローン、
+48kHz出力、SFT/LoRA ファインチューンを持つ。
+
+- 環境: `tools/voxcpm/` に uv 隔離（VoxCPM リポジトリを editable install、torch cu128）。
+  RTX 5070 Ti(Blackwell) 対応のため torch==2.11.0+cu128 に固定（f5-tts と同じ）。
+- モデル: `tools/voxcpm/models/VoxCPM2/`（HF `openbmb/VoxCPM2`、~4.6GB）。
+  **huggingface_hub の Xet/LFS DL がこの環境で CloudFront 接続後に停止する** →
+  aria2c で手動DLすること（`-x16 -s16 -o <name>` を各ファイルに）。`-j2` で複数ファイルを
+  一度に渡すと2つ目が Xet 署名エラーで落ちるので**1ファイルずつ**落とす。DL後は
+  `--model <path>` + `HF_HUB_OFFLINE=1` でネットワークを回避して実行。
+- 呼び出し: `bash scripts/voxcpm.sh {test|design|clone|batch|train|app|python} <args...>`
+  - `test`   : mamimi で全機能検証（`scripts/test_voxcpm_mamimi.py` → `data/output/voxcpm_test/`）
+  - `design` / `clone` / `batch` : `voxcpm` CLI（Voice Design / クローン / 一括）
+  - `train`  : LoRA/SFT ファインチューン（`VoxCPM/scripts/train_voxcpm_finetune.py`）
+- API: `from voxcpm import VoxCPM`; `model.generate(text="(control)text",
+  reference_wav_path=..., prompt_wav_path=..., prompt_text=..., cfg_value=2.0,
+  inference_timesteps=10, normalize=, denoise=)`。初回推論前に torch.compile の
+  ウォームアップ（~4分）が入るので、機能を分けて複数プロセスで回すより1プロセスで一括が速い。
+- 役割分担: 多言語・クロスリンガル・Voice Design = VoxCPM2、日本語+NSFW 感情表現 = Irodori-TTS
+
 ## Code Style
 - Ruff (lint + format, config in pyproject.toml)
 - Line length: 100, double quotes, 4-space indent
