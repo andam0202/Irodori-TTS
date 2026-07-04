@@ -1,0 +1,94 @@
+#!/bin/bash
+# ============================================================================
+# nurse_t_v1 — VOICEVOX「ナースロボ＿タイプＴ」ノーマルスタイル テスト音声生成
+# LoRA: nurse_t v1 / ベースモデル: Irodori-TTS-600M-v3-VoiceDesign
+# 学習データ: ITAコーパス422文 + ROHAN4600先頭578文（計1001件）
+# 日付: 2026-07-05
+# ============================================================================
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+CHECKPOINT="${PROJECT_DIR}/data/lora/nurse_t_v1/nurse_t_v1_best.safetensors"
+REF_WAV="${PROJECT_DIR}/data/nurse_t/wavs/seg_00013.wav"
+OUTPUT_DIR="${PROJECT_DIR}/data/output/nurse_t_v1_test"
+SEED=42
+
+mkdir -p "$OUTPUT_DIR"
+
+CAP_NURSE="優しく落ち着いた声のナースロボ。滑舌よく丁寧に、穏やかな中音域で話す。機械的すぎず、思いやりのある口調。"
+
+# --- helper functions ---
+
+run() {
+    local text="$1" name="$2"
+    echo "[generate] ${name}"
+    uv run python "${PROJECT_DIR}/infer.py" \
+        --checkpoint "$CHECKPOINT" \
+        --text "$text" \
+        --ref-wav "$REF_WAV" \
+        --output-wav "${OUTPUT_DIR}/${name}.wav" \
+        --seed "$SEED" \
+        --tail-fade-ms 120 \
+        --tail-pad-out-ms 250 \
+        2>&1 | tail -1
+}
+
+run_cap() {
+    local text="$1" caption="$2" name="$3"
+    echo "[generate] ${name} (caption: ${caption:0:30}...)"
+    uv run python "${PROJECT_DIR}/infer.py" \
+        --checkpoint "$CHECKPOINT" \
+        --text "$text" \
+        --caption "$caption" \
+        --ref-wav "$REF_WAV" \
+        --output-wav "${OUTPUT_DIR}/${name}.wav" \
+        --seed "$SEED" \
+        --tail-fade-ms 120 \
+        --tail-pad-out-ms 250 \
+        2>&1 | tail -1
+}
+
+# ============================================================================
+# グループ1: 学習コーパスに近い一般文（ITA/ROHAN由来、未使用の文）
+# ============================================================================
+echo "===== グループ1: 学習コーパス系一般文 ====="
+
+run "デーヴィスさんはとても疲れているように見える。" \
+    "01_corpus_疲労描写"
+
+run "イタリア旅行で彼は、いくつか景勝の地として有名な都市、例えば、ナポリやフィレンツェを訪れた。" \
+    "02_corpus_長文旅行"
+
+run "彼女はスタッフをまとめていけると思いますか？" \
+    "03_corpus_疑問文"
+
+# ============================================================================
+# グループ2: ナースロボらしい台詞（キャラクター性）
+# ============================================================================
+echo "===== グループ2: ナースロボ台詞 ====="
+
+run_cap "こんにちは、担当ナースロボです。体調はいかがですか？" \
+    "$CAP_NURSE" "04_nurse_挨拶問診"
+
+run_cap "お注射しますね、少しチクッとしますよ。" \
+    "$CAP_NURSE" "05_nurse_注射"
+
+run_cap "今日も一日お疲れ様でした。ゆっくり休んでくださいね。" \
+    "$CAP_NURSE" "06_nurse_労い"
+
+run_cap "ちゃんと安静にしていないとダメですよ？　無理は禁物です。" \
+    "$CAP_NURSE" "07_nurse_注意"
+
+# ============================================================================
+# グループ3: 感情表現を含む文
+# ============================================================================
+echo "===== グループ3: 感情表現 ====="
+
+run_cap "えっ！？それは大変です、すぐに処置しましょう。" \
+    "$CAP_NURSE" "08_emotion_驚き焦り"
+
+echo "===== 全テスト完了 ====="
+echo "出力先: ${OUTPUT_DIR}/"
+ls -1 "${OUTPUT_DIR}/"*.wav | wc -l | xargs echo "生成ファイル数:"
