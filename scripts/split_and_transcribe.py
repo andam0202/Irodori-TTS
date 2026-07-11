@@ -11,6 +11,11 @@ v4 からの改善点:
 出力:
   <output-dir>/seg_XXXXX.wav  - 分割済み WAV
   <output-dir>/metadata.csv   - (file_name, transcription)
+
+使用例:
+  uv run python scripts/split_and_transcribe.py \
+    --input-mp3 data/input/mamimi/tanakamamimi_clipped_full.mp3 \
+    --output-dir data/mamimi_v5/wavs
 """
 
 from __future__ import annotations
@@ -25,9 +30,7 @@ from pathlib import Path
 import stable_whisper
 
 # ---- デフォルト設定 ----
-DEFAULT_MP3    = Path("data/input/mamimi/tanakamamimi_clipped_full.mp3")
-DEFAULT_OUTDIR = Path("data/mamimi_v5/wavs")
-MODEL_SIZE     = "large-v3"
+MODEL_SIZE = "large-v3"
 
 # 分割・結合パラメータ
 MERGE_GAP  = 0.15   # 秒: これ未満のギャップは同一発話（息継ぎ）として結合
@@ -161,8 +164,8 @@ def get_wav_duration(path: Path) -> float:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="音声分割 + 文字起こし（stable-ts v3）")
-    parser.add_argument("--input-mp3",  type=Path, default=DEFAULT_MP3)
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTDIR)
+    parser.add_argument("--input-mp3", type=Path, required=True, help="入力音声ファイル")
+    parser.add_argument("--output-dir", type=Path, required=True, help="分割 WAV の出力先")
     parser.add_argument(
         "--backend", choices=["openai", "faster"], default="openai",
         help="Whisper バックエンド（faster: CTranslate2 形式の HF キャッシュを使用）",
