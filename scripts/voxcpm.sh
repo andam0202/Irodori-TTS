@@ -18,18 +18,10 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 VOXCPM_PROJECT="${PROJECT_DIR}/tools/voxcpm"
 VOXCPM_REPO="${VOXCPM_PROJECT}/VoxCPM"
-
-# torchcodec の core ライブラリは NPP/cuDNN 等の nvidia 共有ライブラリに runpath 無しで
-# リンクするため、放置するとシステムの古い NPP(libnppicc.so.12)を拾い undefined symbol で
-# 落ちる。venv 内の nvidia/*/lib を最優先にして回避（f5tts.sh と同じ対策）。
-NV_LIB_DIRS="$(ls -d "${VOXCPM_PROJECT}"/.venv/lib/python*/site-packages/nvidia/*/lib 2>/dev/null | tr '\n' ':')"
-if [ -n "${NV_LIB_DIRS}" ]; then
-    export LD_LIBRARY_PATH="${NV_LIB_DIRS}${LD_LIBRARY_PATH:-}"
-fi
+irodori_export_nv_lib_path "$VOXCPM_PROJECT"
 
 CMD="$1"
 shift || true

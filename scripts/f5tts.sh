@@ -14,17 +14,9 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 F5_PROJECT="${PROJECT_DIR}/tools/f5-tts"
-
-# torchcodec の core ライブラリ(libtorchcodec_core6.so 等)は NPP/cuDNN 等の nvidia 共有ライブラリに
-# runpath 無しでリンクするため、放置するとシステムの古い NPP(libnppicc.so.12 12.0.x)を拾い
-# `undefined symbol: nppiNV12ToRGB_...` で落ちる。venv 内の nvidia/*/lib を最優先にして回避する。
-NV_LIB_DIRS="$(ls -d "${F5_PROJECT}"/.venv/lib/python*/site-packages/nvidia/*/lib 2>/dev/null | tr '\n' ':')"
-if [ -n "${NV_LIB_DIRS}" ]; then
-    export LD_LIBRARY_PATH="${NV_LIB_DIRS}${LD_LIBRARY_PATH:-}"
-fi
+irodori_export_nv_lib_path "$F5_PROJECT"
 
 CMD="$1"
 shift || true
