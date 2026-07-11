@@ -1,7 +1,7 @@
 """F5-TTS バッチ推論（モデルを1回だけロードして複数文を生成）。
 
 英語版 Diana のゼロショット音声クローン用。tools/f5-tts 隔離環境で実行する:
-    bash scripts/f5tts.sh python scripts/f5_batch_infer.py \
+    bash scripts/f5tts.sh python projects/diana/f5_batch_infer.py \
         --ref-audio <ref.wav> --ref-text "..." --out-dir <dir> [--tag a]
 """
 

@@ -7,7 +7,7 @@
 # ============================================================================
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts" && pwd)/_common.sh"
 
 CHECKPOINT="${PROJECT_DIR}/data/lora/diana_v4/diana_v4_best.safetensors"
 REF_WAV="${PROJECT_DIR}/data/diana_v4/wavs/seg_00023.wav"
