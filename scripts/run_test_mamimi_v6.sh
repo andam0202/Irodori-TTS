@@ -6,55 +6,15 @@
 # ============================================================================
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
 CHECKPOINT="${PROJECT_DIR}/data/lora/mamimi_v6/mamimi_v6_best.safetensors"
 REF_WAV="${PROJECT_DIR}/data/mamimi_v6/wavs/seg_00005.wav"
 OUTPUT_DIR="${PROJECT_DIR}/data/output/mamimi_test_v6"
 SEED=42
+TAIL_ARGS=""
 
-mkdir -p "$OUTPUT_DIR"
-
-# --- helper functions ---
-
-run() {
-    local text="$1" name="$2"
-    echo "[generate] ${name}"
-    uv run python "${PROJECT_DIR}/infer.py" \
-        --checkpoint "$CHECKPOINT" \
-        --text "$text" \
-        --ref-wav "$REF_WAV" \
-        --output-wav "${OUTPUT_DIR}/${name}.wav" \
-        --seed "$SEED" \
-        2>&1 | tail -1
-}
-
-run_cap() {
-    local text="$1" caption="$2" name="$3"
-    echo "[generate] ${name} (caption: ${caption:0:30}...)"
-    uv run python "${PROJECT_DIR}/infer.py" \
-        --checkpoint "$CHECKPOINT" \
-        --text "$text" \
-        --caption "$caption" \
-        --ref-wav "$REF_WAV" \
-        --output-wav "${OUTPUT_DIR}/${name}.wav" \
-        --seed "$SEED" \
-        2>&1 | tail -1
-}
-
-run_noref() {
-    local text="$1" caption="$2" name="$3"
-    echo "[generate] ${name} (no-ref, caption: ${caption:0:30}...)"
-    uv run python "${PROJECT_DIR}/infer.py" \
-        --checkpoint "$CHECKPOINT" \
-        --text "$text" \
-        --caption "$caption" \
-        --no-ref \
-        --output-wav "${OUTPUT_DIR}/${name}.wav" \
-        --seed "$SEED" \
-        2>&1 | tail -1
-}
+source "${SCRIPT_DIR}/_infer_lora_common.sh"
 
 # ============================================================================
 # グループ1: キャプションなし ベースライン（絵文字の効果）

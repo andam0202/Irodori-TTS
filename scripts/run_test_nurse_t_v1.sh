@@ -7,48 +7,17 @@
 # ============================================================================
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
 CHECKPOINT="${PROJECT_DIR}/data/lora/nurse_t_v1/nurse_t_v1_best.safetensors"
 REF_WAV="${PROJECT_DIR}/data/nurse_t/wavs/seg_00013.wav"
 OUTPUT_DIR="${PROJECT_DIR}/data/output/nurse_t_v1_test"
 SEED=42
+TAIL_ARGS="--tail-fade-ms 120 --tail-pad-out-ms 250"
 
-mkdir -p "$OUTPUT_DIR"
+source "${SCRIPT_DIR}/_infer_lora_common.sh"
 
 CAP_NURSE="優しく落ち着いた声のナースロボ。滑舌よく丁寧に、穏やかな中音域で話す。機械的すぎず、思いやりのある口調。"
-
-# --- helper functions ---
-
-run() {
-    local text="$1" name="$2"
-    echo "[generate] ${name}"
-    uv run python "${PROJECT_DIR}/infer.py" \
-        --checkpoint "$CHECKPOINT" \
-        --text "$text" \
-        --ref-wav "$REF_WAV" \
-        --output-wav "${OUTPUT_DIR}/${name}.wav" \
-        --seed "$SEED" \
-        --tail-fade-ms 120 \
-        --tail-pad-out-ms 250 \
-        2>&1 | tail -1
-}
-
-run_cap() {
-    local text="$1" caption="$2" name="$3"
-    echo "[generate] ${name} (caption: ${caption:0:30}...)"
-    uv run python "${PROJECT_DIR}/infer.py" \
-        --checkpoint "$CHECKPOINT" \
-        --text "$text" \
-        --caption "$caption" \
-        --ref-wav "$REF_WAV" \
-        --output-wav "${OUTPUT_DIR}/${name}.wav" \
-        --seed "$SEED" \
-        --tail-fade-ms 120 \
-        --tail-pad-out-ms 250 \
-        2>&1 | tail -1
-}
 
 # ============================================================================
 # グループ1: 学習コーパスに近い一般文（ITA/ROHAN由来、未使用の文）

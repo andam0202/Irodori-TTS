@@ -99,7 +99,7 @@ ffmpeg -y -f concat -safe 0 -i /tmp/filelist.txt -ac 1 -ar 44100 <output>.wav
 - `--tail-pad-out-ms 250`: 出力末尾に無音を付加（デフォルト0=無効）
 
 LoRA テスト生成スクリプトでは `--tail-fade-ms 120 --tail-pad-out-ms 250` を推奨
-（`scripts/run_test_diana_v3.sh` 参照）。`--duration-scale` は発話速度が変わるだけで
+（`scripts/run_test_diana_v4.sh` 参照。ランナーは `TAIL_ARGS` を設定して `scripts/_infer_lora_common.sh` を source する方式）。`--duration-scale` は発話速度が変わるだけで
 語尾問題には効かない。
 
 ## English TTS (F5-TTS)
@@ -133,6 +133,31 @@ Irodori-TTS（日本語特化・600M）の対抗馬。OpenBMB の 2B **tokenizer
   inference_timesteps=10, normalize=, denoise=)`。初回推論前に torch.compile の
   ウォームアップ（~4分）が入るので、機能を分けて複数プロセスで回すより1プロセスで一括が速い。
 - 役割分担: 多言語・クロスリンガル・Voice Design = VoxCPM2、日本語+NSFW 感情表現 = Irodori-TTS
+
+## 多言語 NSFW 音声（Qwen3-TTS）— 英/露/中/韓
+日本語以外（英語・ロシア語・中国語・韓国語）の **NSFW セリフ・喘ぎ声**は
+**Qwen3-TTS**（Alibaba、Apache-2.0、2026-01 公開）を使う（2026-07-09 策定）。
+
+- 選定理由: 要求4言語＋日本語を含む10言語対応、**Apache-2.0 で商用ゲーム利用可**、
+  ローカル重みでコンテンツフィルタなし、`finetuning/` 同梱で喘ぎ声データでのFTも可能。
+  対抗馬 OpenAudio S1-mini は (panting)(groaning) マーカーを持ち音響的には有力だが
+  **CC-BY-NC-SA（商用不可）**のため不採用。Chatterbox Multilingual(MIT, 23言語)は次点。
+- 環境: `tools/qwen3-tts/` に uv 隔離（PyPI `qwen-tts` + torch==2.11.0+cu128、python 3.12）。
+  **torchaudio は必ず直接依存に書いて cu128 インデックスから入れる**こと。qwen-tts の
+  推移依存で PyPI 版 torchaudio(CUDA 13 ビルド)が入ると `libcudart.so.13` 不在で落ちる。
+- モデル: `tools/qwen3-tts/models/Qwen3-TTS-12Hz-1.7B-{Base,VoiceDesign}`（各 ~4.3GB）。
+  aria2c 1ファイルずつDL（VoxCPM2 と同じ Xet 対策。`-x16` だと範囲リクエストの署名不一致で
+  403 が混ざるが aria2c が自動リトライして完走する）。実行は `HF_HUB_OFFLINE=1`（ラッパーが設定）。
+- 呼び出し: `bash scripts/qwen3tts.sh {design|clone|test|python} <args...>`
+  - `design` : VoiceDesign（テキスト記述からボイス作成、参照音声不要）
+  - `clone`  : Base モデルで3秒ボイスクローン（`--ref-audio` + `--ref-text`）
+  - `test`   : `scripts/test_qwen3tts_nsfw.py`（EN/RU/ZH/KO × セリフ/喘ぎ/囁き →
+    `data/output/qwen3tts_test/`、24kHz 出力）
+- マーカー構文はなく、**instruct（ボイス記述）＋テキスト中の擬音**で表現する。
+  喘ぎは "Ahh... mmm... hah..."（各言語の擬音表記）＋ "moaning in pleasure, breathless panting"
+  系の instruct で生成できる。品質が足りない場合は Base モデルを喘ぎデータでFTする。
+- 役割分担: 日本語 NSFW = Irodori-TTS、**外国語 NSFW/喘ぎ = Qwen3-TTS**、
+  英語クリーン台詞 = F5-TTS、多言語クリーン・クロスリンガル = VoxCPM2
 
 ## Code Style
 - Ruff (lint + format, config in pyproject.toml)

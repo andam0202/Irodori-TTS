@@ -7,46 +7,15 @@
 # ============================================================================
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
 CHECKPOINT="${PROJECT_DIR}/data/lora/diana_v4/diana_v4_best.safetensors"
 REF_WAV="${PROJECT_DIR}/data/diana_v4/wavs/seg_00023.wav"
 OUTPUT_DIR="${PROJECT_DIR}/data/output/diana_test_v4"
 SEED=42
+TAIL_ARGS="--tail-fade-ms 120 --tail-pad-out-ms 250"
 
-mkdir -p "$OUTPUT_DIR"
-
-# --- helper functions ---
-
-run() {
-    local text="$1" name="$2"
-    echo "[generate] ${name}"
-    uv run python "${PROJECT_DIR}/infer.py" \
-        --checkpoint "$CHECKPOINT" \
-        --text "$text" \
-        --ref-wav "$REF_WAV" \
-        --output-wav "${OUTPUT_DIR}/${name}.wav" \
-        --seed "$SEED" \
-        --tail-fade-ms 120 \
-        --tail-pad-out-ms 250 \
-        2>&1 | tail -1
-}
-
-run_cap() {
-    local text="$1" caption="$2" name="$3"
-    echo "[generate] ${name} (caption: ${caption:0:30}...)"
-    uv run python "${PROJECT_DIR}/infer.py" \
-        --checkpoint "$CHECKPOINT" \
-        --text "$text" \
-        --caption "$caption" \
-        --ref-wav "$REF_WAV" \
-        --output-wav "${OUTPUT_DIR}/${name}.wav" \
-        --seed "$SEED" \
-        --tail-fade-ms 120 \
-        --tail-pad-out-ms 250 \
-        2>&1 | tail -1
-}
+source "${SCRIPT_DIR}/_infer_lora_common.sh"
 
 # ============================================================================
 # グループ1: ベースライン（参照音声のみ）
