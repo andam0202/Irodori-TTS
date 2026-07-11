@@ -8,7 +8,7 @@
 # ============================================================================
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts" && pwd)/_common.sh"
 
 CHECKPOINT="${PROJECT_DIR}/data/lora/tenchan_v1/tenchan_v1_best.safetensors"
 REF_WAV="${PROJECT_DIR}/data/tenchan/wavs/seg_00012.wav"
