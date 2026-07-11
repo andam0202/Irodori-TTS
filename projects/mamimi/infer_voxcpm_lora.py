@@ -3,7 +3,7 @@
 VoxCPM2 + mamimi LoRA 適用推論。ゼロショット（03/05）と同じ条件で生成し、学習効果を比較する。
 
 実行（学習完了後）:
-    bash scripts/voxcpm.sh python scripts/infer_voxcpm_lora.py \
+    bash scripts/voxcpm.sh python projects/mamimi/infer_voxcpm_lora.py \
         --lora-ckpt data/output/voxcpm_lora/checkpoints/step_0000300
 
 出力: data/output/voxcpm_test/11_lora/*.wav

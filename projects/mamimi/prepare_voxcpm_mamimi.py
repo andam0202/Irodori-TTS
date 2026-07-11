@@ -8,7 +8,7 @@ mamimi_v6 の manifest.jsonl の latent_path("latents/seg_00005.pt") から seg 
 対応する wavs/*.wav の絶対パス + text で JSONL を出力する。
 
 実行:
-    uv run python scripts/prepare_voxcpm_mamimi.py
+    uv run python projects/mamimi/prepare_voxcpm_mamimi.py
     # → data/mamimi_v6/voxcpm_{train,val}.jsonl
 """
 from __future__ import annotations

@@ -6,7 +6,7 @@
 # ============================================================================
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts" && pwd)/_common.sh"
 
 CHECKPOINT="${PROJECT_DIR}/data/lora/mamimi_v6/mamimi_v6_best.safetensors"
 REF_WAV="${PROJECT_DIR}/data/mamimi_v6/wavs/seg_00005.wav"

@@ -29,7 +29,7 @@ shift || true
 case "$CMD" in
     test)
         # mamimi 音声で全機能を網羅検証し data/output/voxcpm_test/ へ出力
-        exec uv run --project "$VOXCPM_PROJECT" python "${SCRIPT_DIR}/test_voxcpm_mamimi.py" "$@"
+        exec uv run --project "$VOXCPM_PROJECT" python "${PROJECT_DIR}/projects/mamimi/test_voxcpm_mamimi.py" "$@"
         ;;
     design)
         exec uv run --project "$VOXCPM_PROJECT" voxcpm design "$@"
@@ -55,7 +55,7 @@ case "$CMD" in
         ;;
     *)
         echo "使い方: bash scripts/voxcpm.sh {test|design|clone|batch|train|app|python} <args...>"
-        echo "  test    : scripts/test_voxcpm_mamimi.py を実行（mamimi 全機能検証）"
+        echo "  test    : projects/mamimi/test_voxcpm_mamimi.py を実行（mamimi 全機能検証）"
         echo "  design  : voxcpm design CLI（Voice Design）"
         echo "  clone   : voxcpm clone CLI（クローン / Ultimate Clone）"
         echo "  batch   : voxcpm batch CLI（一括処理）"

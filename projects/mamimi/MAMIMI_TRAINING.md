@@ -361,5 +361,5 @@ data/
 scripts/
 ├── split_and_transcribe.py              # 音声分割 + 文字起こし
 ├── encode_latents.py                    # DACVAE レイテント変換
-└── archive/generate_mamimi.sh           # 摩美々音声生成スクリプト（archive へ移動済み）
+└── (projects/mamimi/archive/generate_mamimi.sh へ移動済み)  # 摩美々音声生成スクリプト
 ```
