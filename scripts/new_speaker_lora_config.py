@@ -2,8 +2,8 @@
 
 話者別 config（train_diana_v*/train_mamimi_v6/train_tenchan_v1/train_nurse_t_v1 等）は
 実質 wandb_project/wandb_run_name（と必要なら step 数）しか違わないコピーだった。
-本スクリプトは実績テンプレート（デフォルト: configs/train_mamimi_v6.yaml）を
-テキストレベルで差し替えて configs/train_<speaker>_v<N>.yaml を生成する。
+本スクリプトは実績テンプレート（デフォルト: projects/mamimi/train_mamimi_v6.yaml）を
+テキストレベルで差し替えて projects/<speaker>/train_<speaker>_v<N>.yaml を生成する。
 コメントを保持するためテキスト置換方式とし、生成後に yaml ロードで
 「上書きキー以外はテンプレートとセマンティック同一」であることを自己検証する。
 
@@ -20,7 +20,7 @@ from pathlib import Path
 import yaml
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_TEMPLATE = PROJECT_DIR / "configs" / "train_mamimi_v6.yaml"
+DEFAULT_TEMPLATE = PROJECT_DIR / "projects" / "mamimi" / "train_mamimi_v6.yaml"
 
 # テンプレート内で置換対象となる実値（train_mamimi_v6.yaml のもの）
 TEMPLATE_WANDB_PROJECT = "irodori-tts-mamimi"
@@ -55,7 +55,7 @@ def main() -> None:
     parser.add_argument("--note", default=None,
                         help="ヘッダーに残すメモ（データ件数・注意点など）")
     parser.add_argument("--output", default=None,
-                        help="デフォルト: configs/train_<speaker>_v<version>.yaml")
+                        help="デフォルト: projects/<speaker>/train_<speaker>_v<version>.yaml")
     parser.add_argument("--force", action="store_true", help="既存ファイルを上書きする")
     args = parser.parse_args()
 
@@ -63,7 +63,7 @@ def main() -> None:
     wandb_project = args.wandb_project or f"irodori-tts-{speaker.replace('_', '-')}"
     wandb_run_name = args.wandb_run_name or f"{speaker.replace('_', '-')}-v{args.version}"
     out_path = Path(args.output) if args.output else (
-        PROJECT_DIR / "configs" / f"train_{speaker}_v{args.version}.yaml"
+        PROJECT_DIR / "projects" / speaker / f"train_{speaker}_v{args.version}.yaml"
     )
     if out_path.exists() and not args.force:
         raise SystemExit(f"error: {out_path} は既に存在する（--force で上書き）")
@@ -101,6 +101,7 @@ def main() -> None:
     if generated != expected:
         raise SystemExit("error: 生成結果がテンプレート+上書きと一致しない（テンプレート構造を確認）")
 
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(text, encoding="utf-8")
     print(f"generated: {out_path}")
     print(f"  wandb_project : {wandb_project}")

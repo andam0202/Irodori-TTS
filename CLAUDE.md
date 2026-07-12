@@ -6,11 +6,15 @@
 - Dependencies: `pyproject.toml` / `uv.lock`
 
 ## Script Organization
-- Python utility scripts → `scripts/` directory
+- **プロジェクト固有**（話者 LoRA・用途別検証）のスクリプト/config/ドキュメントは
+  `projects/<name>/` に置く（索引: `projects/README.md`）。新話者 config は
+  `scripts/new_speaker_lora_config.py` で生成する
+- **共有ツール**（データ前処理パイプライン・エンジンラッパー・共通ヘルパー）→ `scripts/`
+- 話者非依存の汎用学習 config → `configs/`、汎用ドキュメント → `docs/`
 - Run: `uv run python scripts/<name>.py`
-- Shell scripts → `scripts/`
 - CLI: argparse を使用（`scripts/split_and_transcribe.py` のパターンに従う）
 - `from __future__ import annotations` を冒頭に記述
+- 各プロジェクトの `archive/` は世代交代済みの無変更保管（本規約の適用外）
 
 ## Data Paths
 - Raw audio input: `data/input/<speaker_name>/`
@@ -99,7 +103,7 @@ ffmpeg -y -f concat -safe 0 -i /tmp/filelist.txt -ac 1 -ar 44100 <output>.wav
 - `--tail-pad-out-ms 250`: 出力末尾に無音を付加（デフォルト0=無効）
 
 LoRA テスト生成スクリプトでは `--tail-fade-ms 120 --tail-pad-out-ms 250` を推奨
-（`scripts/run_test_diana_v4.sh` 参照。ランナーは `TAIL_ARGS` を設定して `scripts/_infer_lora_common.sh` を source する方式）。`--duration-scale` は発話速度が変わるだけで
+（`projects/diana/run_test_diana_v4.sh` 参照。ランナーは `TAIL_ARGS` を設定して `scripts/_infer_lora_common.sh` を source する方式）。`--duration-scale` は発話速度が変わるだけで
 語尾問題には効かない。
 
 ## English TTS (F5-TTS)
@@ -125,7 +129,7 @@ Irodori-TTS（日本語特化・600M）の対抗馬。OpenBMB の 2B **tokenizer
   一度に渡すと2つ目が Xet 署名エラーで落ちるので**1ファイルずつ**落とす。DL後は
   `--model <path>` + `HF_HUB_OFFLINE=1` でネットワークを回避して実行。
 - 呼び出し: `bash scripts/voxcpm.sh {test|design|clone|batch|train|app|python} <args...>`
-  - `test`   : mamimi で全機能検証（`scripts/test_voxcpm_mamimi.py` → `data/output/voxcpm_test/`）
+  - `test`   : mamimi で全機能検証（`projects/mamimi/test_voxcpm_mamimi.py` → `data/output/voxcpm_test/`）
   - `design` / `clone` / `batch` : `voxcpm` CLI（Voice Design / クローン / 一括）
   - `train`  : LoRA/SFT ファインチューン（`VoxCPM/scripts/train_voxcpm_finetune.py`）
 - API: `from voxcpm import VoxCPM`; `model.generate(text="(control)text",
@@ -151,7 +155,7 @@ Irodori-TTS（日本語特化・600M）の対抗馬。OpenBMB の 2B **tokenizer
 - 呼び出し: `bash scripts/qwen3tts.sh {design|clone|test|python} <args...>`
   - `design` : VoiceDesign（テキスト記述からボイス作成、参照音声不要）
   - `clone`  : Base モデルで3秒ボイスクローン（`--ref-audio` + `--ref-text`）
-  - `test`   : `scripts/test_qwen3tts_nsfw.py`（EN/RU/ZH/KO × セリフ/喘ぎ/囁き →
+  - `test`   : `projects/multilingual/test_qwen3tts_nsfw.py`（EN/RU/ZH/KO × セリフ/喘ぎ/囁き →
     `data/output/qwen3tts_test/`、24kHz 出力）
 - マーカー構文はなく、**instruct（ボイス記述）＋テキスト中の擬音**で表現する。
   喘ぎは "Ahh... mmm... hah..."（各言語の擬音表記）＋ "moaning in pleasure, breathless panting"
