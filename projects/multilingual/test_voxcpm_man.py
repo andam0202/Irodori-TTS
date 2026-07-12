@@ -4,8 +4,8 @@ Qwen3-TTS 非対応の Swahili(東アフリカ)・Arabic(北アフリカ) の中
 ボイスを VoxCPM2 Voice Design で生成。**成人男性限定**（未成年は扱わない）。
 4タイプ（command / command_threat / sex_moan / sex_climax）。
 
-bash scripts/voxcpm.sh python scripts/test_voxcpm_man.py
-bash scripts/voxcpm.sh python scripts/test_voxcpm_man.py --languages Swahili --types command
+bash scripts/voxcpm.sh python projects/multilingual/test_voxcpm_man.py
+bash scripts/voxcpm.sh python projects/multilingual/test_voxcpm_man.py --languages Swahili --types command
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import _tts_testgen as testgen  # noqa: E402
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 MODEL_DIR = PROJECT_DIR / "tools" / "voxcpm" / "models" / "VoxCPM2"
 OUTPUT_DIR = PROJECT_DIR / "data" / "output" / "voxcpm_man"
 

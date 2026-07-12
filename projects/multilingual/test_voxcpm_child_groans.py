@@ -5,8 +5,8 @@ Qwen3-TTS が対応しない Swahili(東アフリカ)・Arabic(北アフリカ) 
 9タイプ（fear/pain/grief/exhaustion/dread/cold/cough/wordless_groan/slow_sad）、
 いずれも NON-sexual。
 
-bash scripts/voxcpm.sh python scripts/test_voxcpm_child_groans.py
-bash scripts/voxcpm.sh python scripts/test_voxcpm_child_groans.py --languages Swahili --types cough --seeds 0
+bash scripts/voxcpm.sh python projects/multilingual/test_voxcpm_child_groans.py
+bash scripts/voxcpm.sh python projects/multilingual/test_voxcpm_child_groans.py --languages Swahili --types cough --seeds 0
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import _tts_testgen as testgen  # noqa: E402
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 MODEL_DIR = PROJECT_DIR / "tools" / "voxcpm" / "models" / "VoxCPM2"
 OUTPUT_DIR = PROJECT_DIR / "data" / "output" / "voxcpm_child_groans"
 

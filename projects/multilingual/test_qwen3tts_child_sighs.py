@@ -7,7 +7,7 @@
 5タイプ: relief(安堵) / tired_sigh(疲れ) / nervous_breath(緊張) / sleepy(眠気) / wistful_sigh(物憂げ)
 いずれも NON-sexual。
 
-bash scripts/qwen3tts.sh python scripts/test_qwen3tts_child_sighs.py
+bash scripts/qwen3tts.sh python projects/multilingual/test_qwen3tts_child_sighs.py
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import _tts_testgen as testgen  # noqa: E402
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 MODEL_DIR = PROJECT_DIR / "tools" / "qwen3-tts" / "models" / "Qwen3-TTS-12Hz-1.7B-VoiceDesign"
 OUTPUT_DIR = PROJECT_DIR / "data" / "output" / "qwen3tts_child_sighs"
 

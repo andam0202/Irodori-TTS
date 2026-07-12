@@ -32,7 +32,7 @@ case "$CMD" in
         exec uv run --project "$QWEN_PROJECT" python "${SCRIPT_DIR}/qwen3tts_infer.py" --mode "$CMD" "$@"
         ;;
     test)
-        exec uv run --project "$QWEN_PROJECT" python "${SCRIPT_DIR}/test_qwen3tts_nsfw.py" "$@"
+        exec uv run --project "$QWEN_PROJECT" python "${PROJECT_DIR}/projects/multilingual/test_qwen3tts_nsfw.py" "$@"
         ;;
     python)
         exec uv run --project "$QWEN_PROJECT" python "$@"
@@ -41,7 +41,7 @@ case "$CMD" in
         echo "使い方: bash scripts/qwen3tts.sh {design|clone|test|python} <args...>"
         echo "  design : VoiceDesign（テキスト記述からボイス作成、参照音声不要）"
         echo "  clone  : Base モデルで3秒ボイスクローン（--ref-audio/--ref-text）"
-        echo "  test   : scripts/test_qwen3tts_nsfw.py（EN/RU/ZH/KO NSFWサンプル一括生成）"
+        echo "  test   : projects/multilingual/test_qwen3tts_nsfw.py（EN/RU/ZH/KO NSFWサンプル一括生成）"
         echo "  python : qwen3-tts 環境の python を直接実行"
         exit 1
         ;;

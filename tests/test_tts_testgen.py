@@ -1,4 +1,4 @@
-"""scripts/_tts_testgen.py の回帰テスト（GPU・実モデル不要）.
+"""projects/multilingual/_tts_testgen.py の回帰テスト（GPU・実モデル不要）.
 
 フェイクエンジンを sys.modules に注入し、生成ループの呼び出し順・
 出力ファイル名・manifest 内容を検証する。
@@ -11,7 +11,7 @@ import sys
 import types
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "projects" / "multilingual"))
 
 import _tts_testgen as testgen  # noqa: E402
 

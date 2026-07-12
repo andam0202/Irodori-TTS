@@ -3,7 +3,7 @@
 Qwen3-TTS 非対応の Swahili/Arabic の子ども(8歳女児)の **非性的な吐息** 5種を生成。
 5タイプ: relief / tired_sigh / nervous_breath / sleepy / wistful_sigh。NON-sexual。
 
-bash scripts/voxcpm.sh python scripts/test_voxcpm_child_sighs.py
+bash scripts/voxcpm.sh python projects/multilingual/test_voxcpm_child_sighs.py
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import _tts_testgen as testgen  # noqa: E402
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 MODEL_DIR = PROJECT_DIR / "tools" / "voxcpm" / "models" / "VoxCPM2"
 OUTPUT_DIR = PROJECT_DIR / "data" / "output" / "voxcpm_child_sighs"
 

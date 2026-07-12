@@ -1,13 +1,13 @@
 """Qwen3-TTS / VoxCPM2 テスト生成スクリプトの共通ランナー.
 
-scripts/test_qwen3tts_*.py / test_voxcpm_*.py の共通部分（argparse 定義・
+projects/multilingual/test_qwen3tts_*.py / test_voxcpm_*.py の共通部分（argparse 定義・
 モデルロード・生成ループ・manifest 出力）を集約する。各スクリプトは
 データ辞書（LINES / INSTRUCTS / VOICE_BASE 等）の定義と build_specs への
 組み立てだけを持つ。
 
 CLI ではなく共有モジュール（アンダースコア接頭辞）。利用側は
 `sys.path.insert(0, str(Path(__file__).resolve().parent))` を置いてから
-`import _tts_testgen as testgen` する（scripts/ 直下兄弟 import の確立パターン）。
+`import _tts_testgen as testgen` する（同一ディレクトリ兄弟 import の確立パターン）。
 """
 
 from __future__ import annotations
