@@ -106,6 +106,33 @@ LoRA テスト生成スクリプトでは `--tail-fade-ms 120 --tail-pad-out-ms 
 （`projects/diana/run_test_diana_v4.sh` 参照。ランナーは `TAIL_ARGS` を設定して `scripts/_infer_lora_common.sh` を source する方式）。`--duration-scale` は発話速度が変わるだけで
 語尾問題には効かない。
 
+## 生成の標準：モデル常駐バッチ推論（`scripts/batch_infer.py`）— 2026-07-21 策定
+**複数行・台本・量産の生成は必ず `scripts/batch_infer.py`（モデル常駐バッチ）を使う。**
+`infer.py` を1行ごとに別プロセス起動する方式（`run_test_*.sh` の `run` ループ等）は
+**行ごとに codec+モデル(約2.5GB)を毎回ロードし直すため約130秒/行**と極端に遅い。単発生成・
+デバッグ・単一台詞の確認**のみ**に使うこと。
+
+`batch_infer.py` は **1プロセス内で codec を1回だけロード**し、**checkpoint パスをキーに
+runtime を dict キャッシュ**（同一話者の連続/分散行はモデル再ロードなし）して全行を合成する。
+合成手順・既定値は `infer.py` と一致（num-steps=40 等）。
+
+実測（RTX 5070 Ti、2話者台本）: モデルロードは話者ごと初回のみ（約25〜90秒）、
+**キャッシュ命中後の実合成は約1.5秒/行**。逐次130秒/行に対し、30行3話者のドラマで
+逐次約65分 → バッチ約4.4分（**約15倍**）、増分1行あたりでは約87倍。話者数が少なく行数が
+多いほど有利。
+
+```bash
+# マニフェストは JSONL（1行1オブジェクト）。out_path は絶対推奨。
+#   {"text":"...","caption":"...(任意)","checkpoint":"...","ref_wav":"...","out_path":"...","seed":42,"tail_fade_ms":120,"tail_pad_out_ms":250}
+# seed 省略時は行内容から決定論導出、tail_* 省略時は 120/250。
+uv run python scripts/batch_infer.py --manifest <lines>.jsonl
+```
+
+- 実証済み参考実装は `dramadeus/dramadeus/irodori_batch_worker.py`（同じ方式）。
+  下流（dramadeus の `synth --batch`、PosyoPosyo の `posyo tts`）も**このモデル常駐バッチを標準**とする。
+- 補足: VoxCPM2 でも「1プロセスで一括が速い」と同節に記載済み（ウォームアップ償却）。
+  **TTS全般、複数生成は常駐1プロセスでバッチが原則。**
+
 ## English TTS (F5-TTS)
 Irodori-TTS は日本語特化。**英語の話者モデルは F5-TTS を使う**（2026-06-11 策定）。
 
