@@ -10,6 +10,11 @@
 | [mamimi/](mamimi/) | 田中摩美々 — LoRA v5/v6 / NSFW / 絵文字制御検証 / VoxCPM2 評価・LoRA |
 | [tenchan/](tenchan/) | おるすばん双子ヒロイン — 単一声 LoRA + キャプション演じ分け |
 | [nurse_t/](nurse_t/) | VOICEVOX ナースロボ＿タイプＴ — 合成データ LoRA（ノーマル/ASMR） |
+| [kaho/](kaho/) | 小宮果穂 — LoRA v1（韓国コミュ動画由来） |
+| [asuna/](asuna/) | 一之瀬アスナ — LoRA v1（ブルアカ ボイス集由来） |
+| [karin/](karin/) | 角楯カリン — LoRA v1（ブルアカ ボイス集由来） |
+| [toki/](toki/) | 飛鳥馬トキ — LoRA v1（ブルアカ ボイス集由来） |
+| [bluearchive_asmr/](bluearchive_asmr/) | 上記3キャラの ASMR / NSFW 音声量産（台本生成 + 種類別統合） |
 | [multilingual/](multilingual/) | 多言語ゲームボイス検証 — Qwen3-TTS(EN/RU/ZH/KO/ES/PT) + VoxCPM2(SW/AR) |
 
 新話者プロジェクトの始め方:
