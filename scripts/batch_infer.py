@@ -19,7 +19,8 @@ Manifest format (JSONL, one JSON object per line):
 
     {"text": "...", "caption": "... (optional)",
      "checkpoint": "<path>", "ref_wav": "<path>", "out_path": "<path>",
-     "seed": 42, "tail_fade_ms": 120, "tail_pad_out_ms": 250}
+     "seed": 42, "tail_fade_ms": 120, "tail_pad_out_ms": 250,
+     "duration_scale": 1.0}
 
 ``checkpoint`` / ``ref_wav`` / ``out_path`` may be absolute or relative to the
 Irodori-TTS project root (cwd); existence of ``checkpoint``/``ref_wav`` is
@@ -29,6 +30,8 @@ the line's own content (no wall-clock time or global RNG involved, so the
 same manifest always reproduces the same seeds). ``tail_fade_ms`` /
 ``tail_pad_out_ms`` default to 120 / 250 (the values recommended in
 ``CLAUDE.md`` / the LoRA test scripts) when omitted. ``caption`` is optional.
+``duration_scale`` (default 1.0) multiplies the predicted duration per line
+(>1.0 = slower/longer speech, <1.0 = faster), mirroring ``infer.py --duration-scale``.
 
 Usage:
 
@@ -188,6 +191,7 @@ def _load_manifest(manifest_path: Path, *, root: Path) -> list[dict]:
                     "tail_pad_out_ms": float(
                         record.get("tail_pad_out_ms", TAIL_PAD_OUT_MS_DEFAULT)
                     ),
+                    "duration_scale": float(record.get("duration_scale", 1.0)),
                 }
             )
     return lines
@@ -297,6 +301,7 @@ def _synthesize_one(
     seed: int,
     tail_fade_ms: float,
     tail_pad_out_ms: float,
+    duration_scale: float,
     out_path: Path,
 ) -> None:
     use_speaker_for_request = bool(runtime.model_cfg.use_speaker_condition_resolved)
@@ -330,7 +335,7 @@ def _synthesize_one(
             num_candidates=1,
             decode_mode="sequential",
             seconds=None,
-            duration_scale=1.0,
+            duration_scale=float(duration_scale),
             max_ref_seconds=MAX_REF_SECONDS_DEFAULT,
             max_text_len=None,
             max_caption_len=None,
@@ -480,6 +485,7 @@ def main() -> int:
                 seed=record["seed"],
                 tail_fade_ms=record["tail_fade_ms"],
                 tail_pad_out_ms=record["tail_pad_out_ms"],
+                duration_scale=record["duration_scale"],
                 out_path=record["out_path"],
             )
             elapsed = time.monotonic() - t_line
