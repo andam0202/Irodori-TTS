@@ -13,7 +13,7 @@
 
 - `_tts_testgen.py` — 共通ランナー（GenSpec/build_specs/run_qwen_design/run_voxcpm。
   各 test_* から兄弟 import されるので同一ディレクトリに置くこと）
-- `test_qwen3tts_{nsfw,man,child_sfw,child_sighs,child_groans,child_persona}.py`
+- `test_qwen3tts_{nsfw,man,man_ja,child_sfw,child_sighs,child_groans,child_persona,child_ja}.py`（`man_ja`/`child_ja` は日本語：中年男性/女の子）
 - `test_voxcpm_{man,child_sighs,child_groans}.py`（Swahili/Arabic）
 
 ## 主要コマンド
