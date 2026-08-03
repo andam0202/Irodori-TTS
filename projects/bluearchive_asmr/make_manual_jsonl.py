@@ -208,6 +208,13 @@ def main() -> int:
     ap.add_argument("--out-jsonl", type=Path, default=here / "jsonl/manual.jsonl", help="出力マニフェスト")
     ap.add_argument("--outdir", type=Path, default=DESKTOP, help="wav 出力先のルート")
     ap.add_argument("--subdir", default="manual", help="話者ディレクトリ下のサブフォルダ名")
+    ap.add_argument(
+        "--flat",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="話者フォルダを作らず --outdir 直下に全 wav を並べる（探しやすい）。"
+        "--no-flat で <話者>/<subdir>/ 階層に戻す",
+    )
     ap.add_argument("--list-presets", action="store_true", help="プリセット一覧を表示して終了")
     ap.add_argument("--dry-run", action="store_true", help="jsonl を書かずに解決結果を表示")
     args = ap.parse_args()
@@ -230,7 +237,11 @@ def main() -> int:
     out_lines = []
     for rec in records:
         ckpt, ref, _ = CHARS[rec["speaker"]]
-        out_path = args.outdir / rec["speaker"] / args.subdir / f"{rec['speaker']}_{rec['kind']}.wav"
+        filename = f"{rec['speaker']}_{rec['kind']}.wav"
+        if args.flat:
+            out_path = args.outdir / filename
+        else:
+            out_path = args.outdir / rec["speaker"] / args.subdir / filename
         out_lines.append(
             {
                 "text": rec["text"],
@@ -256,17 +267,20 @@ def main() -> int:
 
     # 話者ごとに固めるとモデルの再ロードが1回で済む（batch_infer は checkpoint をキャッシュする）
     order = list(CHARS)
-    out_lines.sort(key=lambda o: order.index(Path(o["out_path"]).parts[-3]))
+    paired = sorted(zip(records, out_lines), key=lambda p: order.index(p[0]["speaker"]))
+    records = [r for r, _ in paired]
+    out_lines = [o for _, o in paired]
 
     args.out_jsonl.parent.mkdir(parents=True, exist_ok=True)
     args.out_jsonl.write_text(
         "\n".join(json.dumps(o, ensure_ascii=False) for o in out_lines) + "\n", encoding="utf-8"
     )
     per_speaker: dict[str, int] = {}
-    for obj in out_lines:
-        per_speaker[Path(obj["out_path"]).parts[-3]] = per_speaker.get(Path(obj["out_path"]).parts[-3], 0) + 1
+    for rec in records:
+        per_speaker[rec["speaker"]] = per_speaker.get(rec["speaker"], 0) + 1
     summary = " / ".join(f"{k}:{v}" for k, v in per_speaker.items())
     print(f"{len(out_lines)} 行 -> {args.out_jsonl}  （{summary}）")
+    print(f"出力先: {Path(out_lines[0]['out_path']).parent if args.flat else args.outdir}")
     return 0
 
 

@@ -13,7 +13,7 @@
 #   `#` 始まりの行と空行は無視される
 #
 # 生成:  bash projects/bluearchive_asmr/generate_manual.sh
-# 出力:  ~/Desktop/bluearchive_asmr/<話者>/manual/<話者>_<kind>.wav
+# 出力:  デスクトップの bluearchive_manual フォルダに <話者>_<kind>.wav がフラットに並ぶ
 # ============================================================
 
 # ---------------- アスナ（甘え・語尾伸ばし・「ご主人様」） ----------------

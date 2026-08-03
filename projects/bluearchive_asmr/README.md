@@ -65,7 +65,8 @@ bash projects/bluearchive_asmr/generate_manual.sh --dry-run
 bash projects/bluearchive_asmr/generate_manual.sh
 ```
 
-- 出力: `~/Desktop/bluearchive_asmr/<話者>/manual/<話者>_<kind>.wav`
+- 出力: **`~/Desktop/bluearchive_manual/<話者>_<kind>.wav`**（1フォルダにフラットで並ぶ）。
+  話者ごとのフォルダに分けたいときは `--no-flat`、別の場所に出すときは `--outdir <path>`
 - キャプションはプリセット名から自動生成される（話者ごとの声質記述が差し込まれる）。
   プリセットで表現しきれないときだけ5列目に直接書いて上書きする
 - 同じ `kind` を上書き生成すると seed も変わらないため**同じ音**になる。

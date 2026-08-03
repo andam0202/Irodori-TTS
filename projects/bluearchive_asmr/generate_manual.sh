@@ -12,22 +12,28 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO"
 
 MANIFEST="projects/bluearchive_asmr/jsonl/manual.jsonl"
+OUTDIR="/mnt/c/Users/mao0202/Desktop/bluearchive_manual"
+
+# 既定は「デスクトップの1フォルダに全部フラットに並べる」。
+# 追加引数は後ろに付くので、--outdir や --no-flat を渡せば上書きできる。
+DEFAULTS=(--flat --outdir "$OUTDIR")
 
 # --dry-run / --list-presets は jsonl を書かないので、そこで終了する
 for arg in "$@"; do
     case "$arg" in
         --dry-run|--list-presets)
-            uv run python projects/bluearchive_asmr/make_manual_jsonl.py "$@"
+            uv run python projects/bluearchive_asmr/make_manual_jsonl.py "${DEFAULTS[@]}" "$@"
             exit 0
             ;;
     esac
 done
 
-uv run python projects/bluearchive_asmr/make_manual_jsonl.py "$@"
+uv run python projects/bluearchive_asmr/make_manual_jsonl.py "${DEFAULTS[@]}" "$@"
 
 echo
 echo "=== 生成開始（話者切替時のみモデルロード約27秒、以降は約1.5〜2秒/行）"
 uv run python scripts/batch_infer.py --manifest "$MANIFEST"
 
 echo
-echo "=== 出力先: /mnt/c/Users/mao0202/Desktop/bluearchive_asmr/<話者>/manual/"
+echo "=== 出力先: $OUTDIR"
+ls -1 "$OUTDIR"
