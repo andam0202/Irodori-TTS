@@ -53,24 +53,64 @@ done
 または diarization JSON からの再切り出し（`reextract_segments.py --vocals-wav`）で行う。
 
 ## Speaker Diarization Workflow (デフォルト手順)
+
+⚠ **話者分離は `bash scripts/pyannote.sh` 経由で呼ぶこと**（2026-08-03 変更）。
+本体が v4-Small 対応で torch/torchaudio 2.10 に上がった際、torchaudio から
+`AudioMetaData` / `list_audio_backends` が削除され **pyannote.audio 3.4 が本体環境で
+import できなくなった**。話者分離まわりだけ `tools/pyannote/`（pyannote.audio 4.x +
+torch cu128）に隔離してある。本体 venv で `uv run python scripts/diarize_speakers.py`
+を直接叩くと `AttributeError: module 'torchaudio' has no attribute 'AudioMetaData'` で落ちる。
+
 ゲーム実況など多話者音源から特定話者を抽出する場合は、必ず以下の2段階で行う:
 
-1. **diarize_speakers.py**: `--num-speakers を指定しない`（自動推定に任せる）。
+1. **diarize**: `--num-speakers を指定しない`（自動推定に任せる）。
    実際の話者数が不明な音源で話者数を強制すると、クラスタが誤統合され
    別話者が混入する（例: 主役2人が同一クラスタに統合される事故）。
-2. **refine_speaker_clusters.py**: diarization 出力のセグメントを wespeaker 話者埋め込みで
+2. **recluster**: diarization 出力のセグメントを wespeaker 話者埋め込みで
    再クラスタリングする。セグメント境界は正しくクラスタ割り当てだけが悪い場合、
    diarization の再実行（数時間）なしで修正できる。各クラスタの中央値 F0 と
    試聴用サンプル（`samples/`）が出力されるので、目的の話者をユーザーが特定する。
 
 ```bash
-uv run python scripts/refine_speaker_clusters.py \
+bash scripts/pyannote.sh diarize --input <vocals>.wav --no-separate
+
+bash scripts/pyannote.sh recluster \
   --input-dirs data/output/diarization/<name>/speakers/SPEAKER_* \
   --output-dir data/output/diarization/<name>/reclustered
 ```
 
 - 1秒未満のセグメントは埋め込みが不安定なため自動除外される
 - クラスタが過分割される場合は `--threshold` を上げる（デフォルト 0.7）
+- **逆に、短いゲームボイス素材ではデフォルト 0.7 は緩すぎて別話者が同一クラスタに
+  まとまってしまう**。3話者を混ぜた22セグメントでの実測では、0.7 だとクラスタ純度 0.55
+  （asuna/karin/toki が1クラスタに混在）だったのが、**0.55 で純度 0.91** まで改善した。
+  分かれないときは 0.6 → 0.55 と下げる。埋め込み自体の分離は
+  同一話者 cos 0.470 / 別話者 cos 0.295 と差が小さいので、閾値の効きが鋭い。
+- 環境は `tools/pyannote/`。4.x でも動き分離性能も同一だが、torchcodec がシステム
+  FFmpeg 6.1 と噛み合わず毎回ロード失敗の traceback を吐くため 3.4 を採用している。
+  `tools/` は .gitignore 対象なので、作り直す場合は以下の `pyproject.toml` を置いて
+  `uv sync --project tools/pyannote` する（pin を外すと再び壊れるので注意）:
+
+```toml
+[project]
+name = "pyannote-env"
+version = "0.1.0"
+requires-python = ">=3.10,<3.11"   # 3.13 だと torchcodec が FFmpeg を解決できない
+dependencies = [
+    "pyannote-audio==3.4.0",
+    "torch>=2.8.0,<2.9.0",          # 2.9+ で torchaudio.AudioMetaData が消える
+    "torchaudio>=2.8.0,<2.9.0",
+    "huggingface-hub>=0.30,<1.0",   # 1.x で hf_hub_download(use_auth_token=) が消える
+    "soundfile>=0.12.0", "librosa>=0.10.0", "numpy", "scipy>=1.11",
+]
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu128" }]
+torchaudio = [{ index = "pytorch-cu128" }]
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+```
 
 ### 抽出セグメントを学習データ化する際の必須事項
 diarization セグメント群を `split_and_transcribe.py` 用に1本へ連結するときは、
