@@ -24,26 +24,42 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-DESKTOP = Path("/mnt/c/Users/mao0202/Desktop/bluearchive_asmr")
 
-# 話者 -> (checkpoint, ref_wav, キャプションに差し込む声質記述)
-CHARS = {
-    "asuna": (
-        REPO / "data/lora/asuna_v1/checkpoint_best_val_loss_0000300_0.764766.safetensors",
-        REPO / "data/asuna/wavs/seg_00005.wav",
-        "甘えた高めの声で語尾を伸ばす20代の女性",
-    ),
-    "karin": (
-        REPO / "data/lora/karin_v1/checkpoint_best_val_loss_0001200_0.606443.safetensors",
-        REPO / "data/karin/wavs/seg_00059.wav",
-        "クールで低めの声の20代の女性",
-    ),
-    "toki": (
-        REPO / "data/lora/toki_v1/checkpoint_best_val_loss_0000300_0.642423.safetensors",
-        REPO / "data/toki/wavs/seg_00225.wav",
-        "淡々とした報告口調の20代の女性",
-    ),
+# モデル世代 -> wav 出力先ルート。世代を混ぜないよう必ず分ける。
+OUTDIR_BY_MODEL = {
+    "v1": Path("/mnt/c/Users/mao0202/Desktop/bluearchive_manual"),
+    "v4": Path("/mnt/c/Users/mao0202/Desktop/bluearchive_manual_v4"),
 }
+
+# 話者 -> (ref_wav, キャプションに差し込む声質記述)
+# checkpoint は data/lora/<話者>_<世代>/ から val loss 最小のものを自動選択する。
+CHARS = {
+    "asuna": (REPO / "data/asuna/wavs/seg_00005.wav", "甘えた高めの声で語尾を伸ばす20代の女性"),
+    "karin": (REPO / "data/karin/wavs/seg_00059.wav", "クールで低めの声の20代の女性"),
+    "toki": (REPO / "data/toki/wavs/seg_00225.wav", "淡々とした報告口調の20代の女性"),
+}
+
+
+def resolve_checkpoint(speaker: str, model: str) -> Path:
+    """data/lora/<speaker>_<model>/ から val loss 最小の best checkpoint を選ぶ。"""
+    lora_dir = REPO / "data/lora" / f"{speaker}_{model}"
+    if not lora_dir.is_dir():
+        raise SystemExit(f"LoRA ディレクトリがありません: {lora_dir}")
+    # マージ済み .safetensors とアダプタ dir が同名で並ぶため、ファイルを優先する
+    cands = sorted(lora_dir.glob("checkpoint_best_val_loss_*.safetensors"))
+    if not cands:
+        cands = sorted(p for p in lora_dir.glob("checkpoint_best_val_loss_*") if p.is_dir())
+    if not cands:
+        raise SystemExit(f"best checkpoint が見つかりません: {lora_dir}")
+
+    def loss_of(path: Path) -> float:
+        # checkpoint_best_val_loss_<step>_<loss>[.safetensors]
+        try:
+            return float(path.name.removesuffix(".safetensors").split("_")[-1])
+        except ValueError:
+            return float("inf")
+
+    return min(cands, key=loss_of)
 
 # プリセット名 -> (キャプション雛形（{voice} に声質記述が入る）, 既定の duration_scale)
 PRESETS: dict[str, tuple[str, float]] = {
@@ -183,7 +199,7 @@ def parse_lines(path: Path) -> list[dict]:
                 errors.append(f"{path.name}:{lineno}: duration_scale が数値ではありません '{scale_raw}'")
                 continue
 
-        _, _, voice = CHARS[speaker]
+        _, voice = CHARS[speaker]
         records.append(
             {
                 "speaker": speaker,
@@ -206,7 +222,16 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lines", type=Path, default=here / "manual/lines.txt", help="台詞ファイル")
     ap.add_argument("--out-jsonl", type=Path, default=here / "jsonl/manual.jsonl", help="出力マニフェスト")
-    ap.add_argument("--outdir", type=Path, default=DESKTOP, help="wav 出力先のルート")
+    ap.add_argument(
+        "--model",
+        choices=sorted(OUTDIR_BY_MODEL),
+        default="v4",
+        help="使用する LoRA の世代。出力先ルートもこれで切り替わる（既定: v4）",
+    )
+    ap.add_argument(
+        "--outdir", type=Path, default=None,
+        help="wav 出力先のルート（既定: --model に対応するフォルダ）",
+    )
     ap.add_argument("--subdir", default="manual", help="話者ディレクトリ下のサブフォルダ名")
     ap.add_argument(
         "--flat",
@@ -234,9 +259,17 @@ def main() -> int:
         print(f"{args.lines} に有効な行がありません（# はコメント行）", file=sys.stderr)
         return 1
 
+    if args.outdir is None:
+        args.outdir = OUTDIR_BY_MODEL[args.model]
+    checkpoints = {sp: resolve_checkpoint(sp, args.model) for sp in sorted({r["speaker"] for r in records})}
+    print(f"モデル世代: {args.model}")
+    for sp, ckpt in checkpoints.items():
+        print(f"  {sp}: {ckpt.name}")
+
     out_lines = []
     for rec in records:
-        ckpt, ref, _ = CHARS[rec["speaker"]]
+        ref, _ = CHARS[rec["speaker"]]
+        ckpt = checkpoints[rec["speaker"]]
         filename = f"{rec['speaker']}_{rec['kind']}.wav"
         if args.flat:
             out_path = args.outdir / filename

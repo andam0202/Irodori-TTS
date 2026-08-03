@@ -46,6 +46,27 @@ uv run python projects/bluearchive_asmr/consolidate_jsonl.py
 uv run python scripts/batch_infer.py --manifest projects/bluearchive_asmr/jsonl/nsfw_asmr.jsonl
 ```
 
+## モデル世代と出力フォルダの対応
+
+v3 系 LoRA（`*_v1`）と v4-Small 系 LoRA（`*_v4`）は**アーキテクチャ非互換**なので、
+音声の出力先も世代ごとに完全に分ける。混ざると聴き比べができなくなる。
+
+| 世代 | LoRA | 台本一括生成の出力先 | 手動生成の出力先 |
+|---|---|---|---|
+| v1（Irodori-TTS-500M-v3 ベース） | `data/lora/<話者>_v1/` | `Desktop/bluearchive_asmr/` | `Desktop/bluearchive_manual/` |
+| v4（Irodori-TTS-v4-Small ベース） | `data/lora/<話者>_v4/` | `Desktop/bluearchive_asmr_v4/` | `Desktop/bluearchive_manual_v4/` |
+
+checkpoint は `data/lora/<話者>_<世代>/` から **val loss 最小の best を自動選択**する
+（ファイル名を直書きしない）。
+
+既存の台本をそのまま新世代で焼き直すには `retarget_jsonl.py` を使う。台詞・キャプション・
+seed・duration_scale は引き継がれ、checkpoint と出力ルートだけが差し替わる:
+
+```bash
+uv run python projects/bluearchive_asmr/retarget_jsonl.py --model v4
+uv run python scripts/batch_infer.py --manifest projects/bluearchive_asmr/jsonl/v4/nsfw.jsonl
+```
+
 ## 手動で台詞を書いて生成する（manual ワークフロー）
 
 台詞を自分で調整しながら回す用。編集するのは `manual/lines.txt` **1ファイルだけ**。

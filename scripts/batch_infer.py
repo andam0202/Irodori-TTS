@@ -53,24 +53,15 @@ from pathlib import Path
 # import it must add the project root to sys.path first (same pattern as scripts/encode_latents.py).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from irodori_tts.codec import DACVAECodec
-from irodori_tts.config import ModelConfig
 from irodori_tts.inference_runtime import (
     InferenceRuntime,
     RuntimeKey,
     SamplingRequest,
-    _load_checkpoint_for_inference,
-    _maybe_compile_inference_model,
-    _move_inference_module,
     default_runtime_device,
     resolve_cfg_scales,
-    resolve_runtime_device,
-    resolve_runtime_dtype,
     save_wav,
 )
-from irodori_tts.model import TextToLatentRFDiT
 from irodori_tts.tail import postprocess_tail
-from irodori_tts.tokenizer import PretrainedTextTokenizer
 
 # infer.py の argparse 既定値と同一。dramadeus/irodori_batch_worker.py と同じ方針で、
 # infer.py が明示指定しないパラメータはすべてここで infer.py のデフォルトを再現する。
@@ -199,96 +190,33 @@ def _load_manifest(manifest_path: Path, *, root: Path) -> list[dict]:
 
 def _load_runtime_for_checkpoint(
     checkpoint_path: str,
-    shared_codec: DACVAECodec,
     *,
     model_device_str: str,
     model_precision: str,
-    codec_key_fields: dict,
+    codec_device_str: str,
 ) -> InferenceRuntime:
-    """Load only the model for ``checkpoint_path``, reusing ``shared_codec``.
+    """``InferenceRuntime.from_key`` で checkpoint 1本ぶんのランタイムを構築する。
 
-    Mirrors ``InferenceRuntime.from_key`` step-by-step (see
-    ``irodori_tts/inference_runtime.py``), except the codec is not reloaded.
+    以前はコーデックを使い回すために ``irodori_tts.inference_runtime`` の内部実装を
+    ステップごとにミラーしていたが、upstream の v4-Small 対応で内部 API
+    （``_load_checkpoint_for_inference`` の戻り値が3→4要素、pretrained text encoder の
+    導入など）が変わり追随できなくなったため、公開 API に寄せた。
+    コーデックは checkpoint ごとにロードされる（約14秒）が、モデルは行をまたいで
+    キャッシュされるため支配的なコストにはならない。
     """
-    model_device = resolve_runtime_device(model_device_str)
-    model_dtype = resolve_runtime_dtype(precision=model_precision, device=model_device)
-
-    model_state, model_cfg_dict, train_cfg = _load_checkpoint_for_inference(Path(checkpoint_path))
-    model_cfg = ModelConfig(**model_cfg_dict)
-
-    model = TextToLatentRFDiT(model_cfg).to(model_device)
-    model.load_state_dict(model_state)
-    model = _move_inference_module(model, device=model_device, dtype=model_dtype)
-    model.eval()
-    model = _maybe_compile_inference_model(model, enabled=False, dynamic=False)
-
-    tokenizer = PretrainedTextTokenizer.from_pretrained(
-        repo_id=model_cfg.text_tokenizer_repo,
-        add_bos=bool(model_cfg.text_add_bos),
-        local_files_only=False,
-    )
-    if tokenizer.vocab_size != model_cfg.text_vocab_size:
-        raise ValueError(
-            f"text_vocab_size mismatch: checkpoint text_vocab_size={model_cfg.text_vocab_size} "
-            f"but tokenizer ({model_cfg.text_tokenizer_repo}) vocab_size={tokenizer.vocab_size}."
+    return InferenceRuntime.from_key(
+        RuntimeKey(
+            checkpoint=str(checkpoint_path),
+            model_device=model_device_str,
+            codec_repo=CODEC_REPO_DEFAULT,
+            model_precision=model_precision,
+            codec_device=codec_device_str,
+            codec_precision=CODEC_PRECISION_DEFAULT,
+            codec_deterministic_encode=CODEC_DETERMINISTIC_ENCODE_DEFAULT,
+            codec_deterministic_decode=CODEC_DETERMINISTIC_DECODE_DEFAULT,
+            compile_model=False,
+            compile_dynamic=False,
         )
-
-    caption_tokenizer = None
-    if model_cfg.use_caption_condition:
-        caption_tokenizer = PretrainedTextTokenizer.from_pretrained(
-            repo_id=model_cfg.caption_tokenizer_repo_resolved,
-            add_bos=model_cfg.caption_add_bos_resolved,
-            local_files_only=False,
-        )
-        if caption_tokenizer.vocab_size != model_cfg.caption_vocab_size_resolved:
-            raise ValueError(
-                f"caption_vocab_size mismatch: checkpoint caption_vocab_size="
-                f"{model_cfg.caption_vocab_size_resolved} but tokenizer "
-                f"({model_cfg.caption_tokenizer_repo_resolved}) "
-                f"vocab_size={caption_tokenizer.vocab_size}."
-            )
-
-    default_text_max_len = 256
-    default_caption_max_len = default_text_max_len
-    if isinstance(train_cfg, dict):
-        ckpt_text_max_len = train_cfg.get("max_text_len")
-        if isinstance(ckpt_text_max_len, int) and ckpt_text_max_len > 0:
-            default_text_max_len = int(ckpt_text_max_len)
-        ckpt_caption_max_len = train_cfg.get("max_caption_len")
-        if isinstance(ckpt_caption_max_len, int) and ckpt_caption_max_len > 0:
-            default_caption_max_len = int(ckpt_caption_max_len)
-        else:
-            default_caption_max_len = default_text_max_len
-
-    if model_cfg.latent_dim != shared_codec.latent_dim:
-        raise ValueError(
-            f"Latent dimension mismatch: checkpoint latent_dim={model_cfg.latent_dim} "
-            f"but codec latent_dim={shared_codec.latent_dim}."
-        )
-
-    key = RuntimeKey(
-        checkpoint=str(checkpoint_path),
-        model_device=str(model_device),
-        codec_repo=codec_key_fields["codec_repo"],
-        model_precision=model_precision,
-        codec_device=codec_key_fields["codec_device"],
-        codec_precision=codec_key_fields["codec_precision"],
-        codec_deterministic_encode=codec_key_fields["codec_deterministic_encode"],
-        codec_deterministic_decode=codec_key_fields["codec_deterministic_decode"],
-        compile_model=False,
-        compile_dynamic=False,
-    )
-
-    return InferenceRuntime(
-        key=key,
-        model_cfg=model_cfg,
-        train_cfg=train_cfg if isinstance(train_cfg, dict) else None,
-        model=model,
-        tokenizer=tokenizer,
-        caption_tokenizer=caption_tokenizer,
-        codec=shared_codec,
-        default_text_max_len=default_text_max_len,
-        default_caption_max_len=default_caption_max_len,
     )
 
 
@@ -423,31 +351,11 @@ def main() -> int:
     codec_device = str(args.device)
     model_precision = str(args.precision)
 
-    codec_key_fields = {
-        "codec_repo": CODEC_REPO_DEFAULT,
-        "codec_device": codec_device,
-        "codec_precision": CODEC_PRECISION_DEFAULT,
-        "codec_deterministic_encode": CODEC_DETERMINISTIC_ENCODE_DEFAULT,
-        "codec_deterministic_decode": CODEC_DETERMINISTIC_DECODE_DEFAULT,
-    }
-
     print(
-        f"[batch] loading codec repo={CODEC_REPO_DEFAULT} device={codec_device} "
-        "(loaded once, shared across all lines)",
+        f"[batch] codec repo={CODEC_REPO_DEFAULT} device={codec_device} "
+        "(checkpoint ごとに1回ロード。モデルは行をまたいでキャッシュされる)",
         flush=True,
     )
-    t0 = time.monotonic()
-    codec_dtype = resolve_runtime_dtype(
-        precision=CODEC_PRECISION_DEFAULT, device=resolve_runtime_device(codec_device)
-    )
-    shared_codec = DACVAECodec.load(
-        repo_id=CODEC_REPO_DEFAULT,
-        device=codec_device,
-        dtype=codec_dtype,
-        deterministic_encode=CODEC_DETERMINISTIC_ENCODE_DEFAULT,
-        deterministic_decode=CODEC_DETERMINISTIC_DECODE_DEFAULT,
-    )
-    print(f"[batch] codec loaded ({time.monotonic() - t0:.1f}s)", flush=True)
 
     # checkpoint パス -> InferenceRuntime。同一checkpointの行はここでヒットしモデル再ロードを
     # スキップする。
@@ -469,10 +377,9 @@ def main() -> int:
                 t_load = time.monotonic()
                 runtime = _load_runtime_for_checkpoint(
                     checkpoint,
-                    shared_codec,
                     model_device_str=model_device,
                     model_precision=model_precision,
-                    codec_key_fields=codec_key_fields,
+                    codec_device_str=codec_device,
                 )
                 runtime_cache[checkpoint] = runtime
                 print(f"[batch] checkpoint loaded ({time.monotonic() - t_load:.1f}s)", flush=True)
