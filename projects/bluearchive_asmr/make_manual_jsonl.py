@@ -290,7 +290,7 @@ def main() -> int:
         )
 
     if args.dry_run:
-        for rec, obj in zip(records, out_lines):
+        for rec, obj in zip(records, out_lines, strict=True):
             print(f"--- {rec['speaker']}_{rec['kind']}  (scale={rec['duration_scale']})")
             print(f"  text   : {rec['text']}")
             print(f"  caption: {rec['caption']}")
@@ -300,7 +300,7 @@ def main() -> int:
 
     # 話者ごとに固めるとモデルの再ロードが1回で済む（batch_infer は checkpoint をキャッシュする）
     order = list(CHARS)
-    paired = sorted(zip(records, out_lines), key=lambda p: order.index(p[0]["speaker"]))
+    paired = sorted(zip(records, out_lines, strict=True), key=lambda p: order.index(p[0]["speaker"]))
     records = [r for r, _ in paired]
     out_lines = [o for _, o in paired]
 
