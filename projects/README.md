@@ -14,6 +14,9 @@
 | [asuna/](asuna/) | 一之瀬アスナ — LoRA v1（ブルアカ ボイス集由来） |
 | [karin/](karin/) | 角楯カリン — LoRA v1（ブルアカ ボイス集由来） |
 | [toki/](toki/) | 飛鳥馬トキ — LoRA v1（ブルアカ ボイス集由来） |
+| [reisa/](reisa/) | 宇沢レイサ — LoRA v4（ブルアカ ボイス集由来） |
+| [kaai_yuki/](kaai_yuki/) | 歌愛ゆき — LoRA v4（AivisSpeech 合成データ由来・準備中） |
+| [luca_song/](luca_song/) | 斑鳩ルカ 歌声由来 LoRA v4 + コメティック3人の SVC(RVC/Seed-VC) |
 | [bluearchive_asmr/](bluearchive_asmr/) | 上記3キャラの ASMR / NSFW 音声量産（台本生成 + 種類別統合） |
 | [multilingual/](multilingual/) | 多言語ゲームボイス検証 — Qwen3-TTS(EN/RU/ZH/KO/ES/PT) + VoxCPM2(SW/AR) |
 

@@ -36,6 +36,16 @@
 - **長尺音声は必ず 30 分チャンクに分割してから分離する**。全長を一度に処理すると
   分離後の WAV 書き出し時にメモリ不足でプロセスが落ちる（ログを残さず死ぬので注意）。
 
+### 歌モノのボーカル抽出は MelBand Roformer Vocals（2026-08-16 策定）
+**楽曲から歌声を取り出す用途では `vocals_mel_band_roformer.ckpt`（vocals SDR 12.6）を使う。**
+BS-RoFormer は vocals SDR 11.8 で、ボーカル特化モデルに一歩劣る。同一区間での
+聴き比べ（`data/output/luca_svc/sep_compare/`）を経てユーザーが採用を決定した。
+
+- 使い分け: **歌声抽出 = MelBand Roformer Vocals** / **インスト側 = BS-RoFormer**
+  （instrumental SDR 16.5 と BS-RoFormer が優秀。ミックスで戻す伴奏はこちらから取る）
+- ゲーム音声など台詞の抽出は従来どおり BS-RoFormer で構わない
+- モデル一覧は `audio-separator --list_models --list_filter=vocals` で確認できる
+
 ```bash
 # 1) 元音声を30分チャンクに分割
 ffmpeg -y -i <input>.wav -f segment -segment_time 1800 -c copy data/output/separation/chunks/chunk_%03d.wav
@@ -229,6 +239,43 @@ Irodori-TTS（日本語特化・600M）の対抗馬。OpenBMB の 2B **tokenizer
   系の instruct で生成できる。品質が足りない場合は Base モデルを喘ぎデータでFTする。
 - 役割分担: 日本語 NSFW = Irodori-TTS、**外国語 NSFW/喘ぎ = Qwen3-TTS**、
   英語クリーン台詞 = F5-TTS、多言語クリーン・クロスリンガル = VoxCPM2
+
+## 歌声変換（SVC）— 下見は Seed-VC、本命は RVC 専用モデル（2026-08-16 策定）
+Irodori-TTS は日本語セリフ用で、歌のピッチ・ロングトーンは扱えない。**曲を別の声で
+歌わせる用途は SVC を使う**。手順は「Seed-VC で下見 → RVC で専用モデルを作って仕上げ」。
+
+- **Seed-VC（ゼロショット、学習不要）**: `bash scripts/seedvc.sh vc --f0-condition True`
+  で歌声モードになる。参照クリップ1本で試せるので方向性の確認に使う。
+  `--auto-f0-adjust True` は参照クリップの音域に合わせて**勝手にキーが変わる**
+  （実測 +3.2 半音）。原曲キーを保つなら **False + `--semi-tone-shift 0`**。
+  ルカ寄りを強めるのは `--inference-cfg-rate`（0.7 → 1.0）。
+  ⚠ `inference.py` の保存は torchaudio 2.9+ で torchcodec 必須になり落ちるため、
+  **soundfile 書き出しにパッチ済み**（`tools/` は .gitignore なので再構築時は要再適用）。
+- **RVC v2 = Applio**（`tools/applio/`、uv + python 3.12 + torch cu128）:
+  `core.py preprocess → extract → train`。話者ごとに専用モデルを学習する。
+  実績値: 35〜43分の素材・48kHz・batch 16・300 epoch で RTX 5090 約45〜60分。
+  ローカル RTX 5070 Ti(WSL2) では batch 8 が pin_memory で OOM → **batch 4 + `--checkpointing`**。
+  ⚠ **`assets/config.json` が無いと学習終了時の推論用モデル書き出しが失敗する**
+  （`assets/config_template.json` をコピーすれば解消）。失敗しても学習
+  チェックポイント `G_*.pth` は無傷なので、`extract_model()` で後から復元できる。
+  過学習に備え **中間 epoch の重みも確保してからインスタンスを破棄する**こと。
+
+```bash
+# 変換（index-rate と protect が「その話者らしさ」の主要つまみ）
+cd tools/applio && .venv/bin/python core.py infer \
+  --input-path <vocals>.wav --output-path <out>.wav \
+  --pth-path logs/<name>_rvc/<name>_rvc_300e_*.pth \
+  --index-path logs/<name>_rvc/<name>_rvc.index \
+  --f0-method rmvpe --index-rate 0.9 --pitch 0 --protect 0.2
+```
+
+- `--index-rate` 0.7→0.9 / `--protect` 0.33→0.2 で学習した声質への追従が強まる。
+  上げすぎると子音が潰れて歌詞が不明瞭になるのでこの辺が実用上限。
+- **ミックス時の必須事項**: RVC 出力は 48kHz、BS-RoFormer のインストは 44.1kHz。
+  `amix` に混在レートのまま渡すと**伴奏が崩れる**。両方 `aresample=48000` で揃える。
+  また変換ボーカルはインストより 5〜6dB 小さく埋もれるので **+6dB** 程度持ち上げる。
+- DAW での手作業（破綻箇所の差し替え）は `docs/DTM_GUIDE.md` と
+  `docs/REAPER_HANDS_ON.md` を参照。
 
 ## Code Style
 - Ruff (lint + format, config in pyproject.toml)
