@@ -15,6 +15,9 @@
 | [karin/](karin/) | 角楯カリン — LoRA v1（ブルアカ ボイス集由来） |
 | [toki/](toki/) | 飛鳥馬トキ — LoRA v1（ブルアカ ボイス集由来） |
 | [reisa/](reisa/) | 宇沢レイサ — LoRA v4（ブルアカ ボイス集由来） |
+| [kiriko/](kiriko/) | 幽谷霧子 — LoRA v1（シャニマス ボイス集由来・**v4.1-Small ベース**） |
+| [homura/](homura/) | 暁美ほむら — LoRA v1（まどマギ／マギレコ ボイス集由来・**v4.1-Small ベース**） |
+| [sayaka/](sayaka/) | 美樹さやか — LoRA v1（まどマギ／マギレコ ボイス集由来・**v4.1-Small ベース**） |
 | [kaai_yuki/](kaai_yuki/) | 歌愛ゆき — LoRA v4（AivisSpeech 合成データ由来・準備中） |
 | [luca_song/](luca_song/) | 斑鳩ルカ 歌声由来 LoRA v4 + コメティック3人の SVC(RVC/Seed-VC) |
 | [bluearchive_asmr/](bluearchive_asmr/) | 上記3キャラの ASMR / NSFW 音声量産（台本生成 + 種類別統合） |
