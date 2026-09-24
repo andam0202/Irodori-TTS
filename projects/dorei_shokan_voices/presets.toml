@@ -23,8 +23,8 @@ lines = ["talk", "mid_m01"]
 id = "onesan"
 name = "お姉さん（大人の余裕）"
 caption = "落ち着いた艶のある中音域の声の、大人の女性。余裕があり、相手を甘やかすように柔らかく微笑みながら話す。"
-seed = 0
-ref_wav = ""
+seed = 202
+ref_wav = "projects/dorei_shokan_voices/refs/onesan.wav"
 
 [[preset]]
 id = "genki"
@@ -37,15 +37,15 @@ ref_wav = ""
 id = "cool"
 name = "クール（スレンダー美女）"
 caption = "低めで落ち着いた、澄んだ声の20代後半の女性。感情をあまり表に出さず、静かに淡々と話す。"
-seed = 0
-ref_wav = ""
+seed = 202
+ref_wav = "projects/dorei_shokan_voices/refs/cool.wav"
 
 [[preset]]
 id = "ottori"
 name = "おっとり（癒し系）"
 caption = "柔らかくおっとりとした声の20代の女性。ゆっくりとした穏やかな口調で、包み込むように優しく話す。"
-seed = 0
-ref_wav = ""
+seed = 202
+ref_wav = "projects/dorei_shokan_voices/refs/ottori.wav"
 
 [[preset]]
 id = "tsun"
@@ -74,3 +74,55 @@ name = "妖艶（ねっとり年上）"
 caption = "低く甘い艶っぽい声の、年上の大人の女性。語尾をねっとりと引き延ばし、誘うように妖艶に話す。"
 seed = 0
 ref_wav = ""
+
+# ---- ラウンド2（2026-09-25）: キャンキャンした犬娘・猫娘系と、あどけなさの残る可愛い声 ----
+# 全員成人。子供を示す語は使わず、あどけなさ・高さ・甘さで表現する。
+# round はオーディションページの並び順（大きいほど上）にだけ使う。
+
+[[preset]]
+id = "inu"
+name = "犬娘（キャンキャン）"
+caption = "高く弾むような声の、20歳前後の若い女性。犬のように人懐っこく元気いっぱいで、キャンキャンとよく鳴くように、語尾を跳ねさせて話す。"
+seed = 0
+ref_wav = ""
+round = 2
+
+[[preset]]
+id = "neko"
+name = "猫娘（気まぐれ甘え）"
+caption = "甘えた高めの声の、20歳前後の若い女性。猫のように気まぐれで、鼻にかかった甘え声と、つんとすました声を交えて話す。"
+seed = 0
+ref_wav = ""
+round = 2
+
+[[preset]]
+id = "ado_amai"
+name = "あどけない・甘え"
+caption = "あどけなさの残る、高く甘い声の20歳前後の女性。少し舌足らずで、ふわふわと甘えるように話す。"
+seed = 0
+ref_wav = ""
+round = 2
+
+[[preset]]
+id = "ado_genki"
+name = "あどけない・元気"
+caption = "あどけなさの残る、高く明るい声の20歳前後の女性。元気いっぱいで、無邪気にはしゃぐように話す。"
+seed = 0
+ref_wav = ""
+round = 2
+
+[[preset]]
+id = "ado_shy"
+name = "あどけない・恥ずかしがり"
+caption = "あどけなさの残る、高く細い声の20歳前後の女性。恥ずかしがり屋で、もじもじと小声で話す。"
+seed = 0
+ref_wav = ""
+round = 2
+
+[[preset]]
+id = "ado_nama"
+name = "あどけない・生意気"
+caption = "あどけなさの残る、高めでやや生意気な声の20歳前後の女性。相手をからかうように、いたずらっぽく話す。"
+seed = 0
+ref_wav = ""
+round = 2

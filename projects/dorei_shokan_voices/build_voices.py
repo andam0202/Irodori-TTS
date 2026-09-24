@@ -244,7 +244,9 @@ h1{font-size:20px;margin:0 0 4px}p.note{color:var(--mut);margin:0 0 16px;font-si
 table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--line);vertical-align:top;padding:8px}
 th.p{width:260px;text-align:left;background:var(--card)}th.p .n{font-size:17px}
 th.p .id{color:var(--acc);font-family:monospace}th.p .c{font-weight:normal;color:var(--mut);font-size:12px;margin-top:6px}
-td.cell{min-width:190px}td.cell.sel{background:#3a2330;outline:2px solid var(--acc)}
+td.cell{min-width:190px}.badge{background:#2f6b3a;color:#fff;border-radius:4px;padding:2px 6px;font-size:13px;font-family:sans-serif}
+.rnd{color:var(--mut)}td.cell.adopted{box-shadow:inset 0 0 0 3px #2f6b3a}tr.done th.p{opacity:.75}
+td.cell.sel{background:#3a2330;outline:2px solid var(--acc)}
 .seed{font-size:30px;font-weight:bold;font-family:monospace;display:flex;align-items:center;gap:8px}
 .seed input{width:20px;height:20px}.lab{font-size:11px;color:var(--mut);margin-top:6px}
 audio{width:180px;height:32px;display:block}
@@ -285,7 +287,9 @@ def write_page(cfg: dict, lines: list[dict]) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     head = "".join(f"<th>seed {s}</th>" for s in seeds)
     body = []
-    for p in cfg["preset"]:
+    # 新しいラウンドを上に。同じラウンド内は presets.toml の順
+    ordered = sorted(cfg["preset"], key=lambda p: -int(p.get("round", 1)))
+    for p in ordered:
         cells = []
         for s in seeds:
             clips = []
@@ -300,15 +304,17 @@ def write_page(cfg: dict, lines: list[dict]) -> Path:
                 )
                 clips.append(f'<div class="lab">{html.escape(lid)}：{txt}</div>{player}')
             cells.append(
-                f'<td class="cell" data-p="{p["id"]}" data-s="{s}">'
+                f'<td class="cell{" adopted" if int(p.get("seed") or 0) == s else ""}"'
+                f' data-p="{p["id"]}" data-s="{s}">'
                 f'<label class="seed"><input type="radio" name="{p["id"]}" value="{s}">{s}</label>'
                 + "".join(clips)
                 + "</td>"
             )
-        adopted = f"（採用済み seed {p['seed']}）" if p.get("seed") else ""
+        adopted = f'<span class="badge">採用済み seed {p["seed"]}</span>' if p.get("seed") else ""
+        rnd = f'<span class="rnd">R{int(p.get("round", 1))}</span>'
         body.append(
             f'<tr><th class="p"><div class="n">{html.escape(p["name"])}</div>'
-            f'<div class="id">{p["id"]} {adopted}</div>'
+            f'<div class="id">{rnd} {p["id"]} {adopted}</div>'
             f'<div class="c">{html.escape(p["caption"])}</div>'
             f'<textarea class="memo" data-p="{p["id"]}" rows="3" placeholder="メモ"></textarea>'
             f"</th>{''.join(cells)}</tr>"
