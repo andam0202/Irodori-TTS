@@ -1,0 +1,135 @@
+# 閉じた部屋から聞こえる声の台本（全プリセット共通。プリセット別の言い回しは後で）。
+#
+#   id             … ファイル名（<phase>_<種別><連番>。種別 m=喘ぎ b=吐息 s=台詞）
+#   phase          … audition / start / mid / climax（build の既定は start・mid・climax）
+#   kind           … moan / breath / speech
+#   text           … 読み上げテキスト。喘ぎ・吐息は擬音だけ・母音を伸ばす（asuna_moan のレシピ）
+#   style          … プリセットの caption の後ろに足す、この行の演技の説明（"" なら足さない）
+#   duration_scale … 省略時 1.0。喘ぎ・吐息は 1.3（asuna_moan / ginko_moan_cast と同じ）
+#
+# 囁き・吐息寄りの caption は母音が濁りやすい（tenchan / reisa の知見）ので、
+# 吐息の行でも「小さく甘い声で」と書いて声を残す。
+
+# ---- オーディション専用（声の個体を聞き比べる素の台詞。adopt 時の参照音声になる） ----
+[[line]]
+id = "talk"
+phase = "audition"
+kind = "speech"
+text = "いらっしゃい。今夜は、ゆっくりしていってね。"
+style = ""
+
+# ---- start: 始まり（まだ声は小さい） ----
+[[line]]
+id = "start_b01"
+phase = "start"
+kind = "breath"
+text = "はぁ……ふぅ……んっ……はぁ……"
+style = "今は小さく甘い声で、静かに息を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "start_m01"
+phase = "start"
+kind = "moan"
+text = "んっ……ん……はぁ……んぅ……"
+style = "今は控えめに喘ぎ始めている。甘く鼻にかかった短い声で、言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "start_s01"
+phase = "start"
+kind = "speech"
+text = "ん……くすぐったい……"
+style = "今は吐息まじりに、甘く小さな声で話している。"
+
+[[line]]
+id = "start_s02"
+phase = "start"
+kind = "speech"
+text = "もう……せっかちなんだから……"
+style = "今は吐息まじりに、甘く小さな声で話している。"
+
+[[line]]
+id = "start_s03"
+phase = "start"
+kind = "speech"
+text = "優しく……してね……？"
+style = "今は吐息まじりに、甘く小さな声で話している。"
+
+# ---- mid: 最中（息が荒く、声がはっきりしてくる） ----
+[[line]]
+id = "mid_m01"
+phase = "mid"
+kind = "moan"
+text = "あっ、あっ……んんっ……はぁ、あぁっ……んっ、あっ……"
+style = "今は気持ちよさそうに喘いでいる。息が荒く、声が少し大きく、一定のリズムで続く。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "mid_m02"
+phase = "mid"
+kind = "moan"
+text = "んっ、あぁ……あっ、あっ……はぁっ、んんっ……"
+style = "今は気持ちよさそうに喘いでいる。息が荒く、声が少し大きく、一定のリズムで続く。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "mid_b01"
+phase = "mid"
+kind = "breath"
+text = "はぁ、はぁ……んっ……はぁ、はぁ……"
+style = "今は小さく甘い声で、荒い息を繰り返している。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "mid_s01"
+phase = "mid"
+kind = "speech"
+text = "そこ……っ、いい……"
+style = "今は息を弾ませ、喘ぎまじりに途切れ途切れに話している。"
+
+[[line]]
+id = "mid_s02"
+phase = "mid"
+kind = "speech"
+text = "もっと……もっと、奥まで……っ"
+style = "今は息を弾ませ、喘ぎまじりに途切れ途切れに話している。"
+
+# ---- climax: 絶頂（大きく高い声、最後に余韻の吐息） ----
+[[line]]
+id = "climax_m01"
+phase = "climax"
+kind = "moan"
+text = "あっ、あっ、あぁっ……！……んんっ……あぁぁっ……！"
+style = "今は激しく喘いで声を上げている。大きく高い声が連続し、泣きそうに震える。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "climax_m02"
+phase = "climax"
+kind = "moan"
+text = "あっ、あっ、あっ……あぁぁぁっ……！……んんんっ……！"
+style = "今は絶頂で長く声を上げ、震えながら息を吐き切る。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "climax_s01"
+phase = "climax"
+kind = "speech"
+text = "だめ、もう……いっちゃう……っ！"
+style = "今は切羽詰まって、喘ぎながら高い声で叫ぶように話している。"
+
+[[line]]
+id = "climax_s02"
+phase = "climax"
+kind = "speech"
+text = "あっ……いく、いくっ……！"
+style = "今は切羽詰まって、喘ぎながら高い声で叫ぶように話している。"
+
+[[line]]
+id = "climax_b01"
+phase = "climax"
+kind = "breath"
+text = "はぁ……はぁ……んっ……ふぅ……"
+style = "今は絶頂のあとで、力の抜けた甘い息を細く長く漏らしている。言葉は無い。"
+duration_scale = 1.3

@@ -1,0 +1,76 @@
+# 奴隷娼館リメイク（Godot）の「閉じた部屋から漏れ聞こえる声」のボイスプリセット。
+# 登場キャラは全員成人。こもった音は Godot 側のローパスで作るので、ここでは素の声を作る。
+#
+# 各プリセット:
+#   id       … ファイル名・Godot 側のキー（英小文字）
+#   name     … 表示名
+#   caption  … VoiceDesign 用の声質説明（自然文）。台本行の style がこの後ろに足される
+#   seed     … 採用した seed（オーディションで決める。0 = 未決）
+#   ref_wav  … 採用した参照音声（リポジトリ相対。"" = 未決）。
+#              `build_voices.py adopt <id> <seed>` で seed と一緒に書き込まれる
+#
+# 段階1（オーディション）は caption のみ（no-ref）で [audition].seeds を総当たりし、
+# 段階2（build）は ref_wav + caption + seed で lines.toml 全本を作る。
+
+checkpoint = "models/Irodori-TTS-v4.1-Small/model.safetensors"
+
+[audition]
+seeds = [101, 202, 303, 404, 505, 606]
+# lines.toml の id。普通の台詞 1 本 + mid の喘ぎ 1 本。先頭の台詞が adopt 時の参照音声になる
+lines = ["talk", "mid_m01"]
+
+[[preset]]
+id = "onesan"
+name = "お姉さん（大人の余裕）"
+caption = "落ち着いた艶のある中音域の声の、大人の女性。余裕があり、相手を甘やかすように柔らかく微笑みながら話す。"
+seed = 0
+ref_wav = ""
+
+[[preset]]
+id = "genki"
+name = "元気（小柄で明るい）"
+caption = "明るく張りのある高めの声の、小柄な20代前半の女性。元気で人懐っこく、弾むように楽しそうに話す。"
+seed = 0
+ref_wav = ""
+
+[[preset]]
+id = "cool"
+name = "クール（スレンダー美女）"
+caption = "低めで落ち着いた、澄んだ声の20代後半の女性。感情をあまり表に出さず、静かに淡々と話す。"
+seed = 0
+ref_wav = ""
+
+[[preset]]
+id = "ottori"
+name = "おっとり（癒し系）"
+caption = "柔らかくおっとりとした声の20代の女性。ゆっくりとした穏やかな口調で、包み込むように優しく話す。"
+seed = 0
+ref_wav = ""
+
+[[preset]]
+id = "tsun"
+name = "ツン（気が強い）"
+caption = "はっきりとした強めの声の20代の女性。気が強く、少しつっけんどんに言い放つように話す。"
+seed = 0
+ref_wav = ""
+
+[[preset]]
+id = "husky"
+name = "ハスキー（低めの大人）"
+caption = "低めで少しかすれたハスキーな声の、大人の女性。気だるげで色気があり、ゆったりと話す。"
+seed = 0
+ref_wav = ""
+
+[[preset]]
+id = "shy"
+name = "恥ずかしがり（小声）"
+caption = "小さく控えめな声の20代前半の女性。恥ずかしがり屋で、消え入りそうな小声でおずおずと話す。"
+seed = 0
+ref_wav = ""
+
+[[preset]]
+id = "youen"
+name = "妖艶（ねっとり年上）"
+caption = "低く甘い艶っぽい声の、年上の大人の女性。語尾をねっとりと引き延ばし、誘うように妖艶に話す。"
+seed = 0
+ref_wav = ""

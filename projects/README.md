@@ -22,6 +22,7 @@
 | [luca_song/](luca_song/) | 斑鳩ルカ 歌声由来 LoRA v4 + コメティック3人の SVC(RVC/Seed-VC) |
 | [bluearchive_asmr/](bluearchive_asmr/) | 上記3キャラの ASMR / NSFW 音声量産（台本生成 + 種類別統合） |
 | [multilingual/](multilingual/) | 多言語ゲームボイス検証 — Qwen3-TTS(EN/RU/ZH/KO/ES/PT) + VoxCPM2(SW/AR) |
+| [dorei_shokan_voices/](dorei_shokan_voices/) | 奴隷娼館リメイク（Godot）の「閉じた部屋から漏れ聞こえる声」ボイスプリセット8種 — v4.1-Small VoiceDesign で seed オーディション → 参照音声固定 → 台本一括生成＋ogg（`build_voices.py`） |
 
 新話者プロジェクトの始め方:
 
