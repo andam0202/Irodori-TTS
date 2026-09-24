@@ -1,0 +1,80 @@
+# 喘ぎ声の作り方の比較用台本（10行）。書式は lines.toml と同じ。
+# 方式A（Irodori の参照音声で直接）と方式B（別の声で演じて Seed-VC で変換）を compare_voices.py で比べる。
+
+[[line]]
+id = "c01"
+phase = "start"
+kind = "breath"
+text = "はぁ……ふぅ……んっ……"
+style = "今は小さく甘い声で静かに息を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "c02"
+phase = "start"
+kind = "moan"
+text = "んっ……ん……んぅ……"
+style = "今は控えめに、鼻にかかった甘い声で喘ぎ始めている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "c03"
+phase = "mid"
+kind = "moan"
+text = "あっ……あんっ……んっ……"
+style = "今は気持ちよさそうに、短く途切れる声で喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "c04"
+phase = "mid"
+kind = "moan"
+text = "あっ、あっ、あぁんっ……"
+style = "今は息を弾ませ、リズムに合わせて声をあげて喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "c05"
+phase = "mid"
+kind = "moan"
+text = "あぁっ……！　んあっ、あぁぁっ……"
+style = "今は激しく、声を抑えきれずに大きく喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "c06"
+phase = "mid"
+kind = "breath"
+text = "はっ、はっ、はぁっ……"
+style = "今は息が荒く、肩で息をしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "c07"
+phase = "mid"
+kind = "speech"
+text = "そこ……だめぇ……"
+style = "今は喘ぎまじりに、とろけた甘い声で話している。"
+
+[[line]]
+id = "c08"
+phase = "climax"
+kind = "moan"
+text = "あっ、あっ、あぁぁぁぁっ……！"
+style = "今は絶頂に達し、声が裏返るほど高く長く叫んでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "c09"
+phase = "climax"
+kind = "speech"
+text = "いっ……ちゃう……っ！"
+style = "今は絶頂の直前で、切羽詰まった高い声で叫ぶように話している。"
+
+[[line]]
+id = "c10"
+phase = "after"
+kind = "breath"
+text = "はぁ……はぁ……ふぅ……"
+style = "今は絶頂のあとで、力が抜けたまま荒い息を整えている。言葉は無い。"
+duration_scale = 1.3

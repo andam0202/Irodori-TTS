@@ -94,7 +94,7 @@ def cell_caption(m: dict, key: str, presets: dict) -> str:
 
 
 def select_cells(m: dict, spec: str | None) -> list[str]:
-    """`inu:slender,neko:*,*:glamour` 形式（* は全部）。None なら全セル。"""
+    """`inu:kogara,neko:*,*:glamour` 形式（* は全部）。None なら全セル。"""
     keys = list(m["cells"])
     if not spec:
         return keys
@@ -243,7 +243,8 @@ def cmd_matrix_build(args: argparse.Namespace) -> None:
         else [ln for ln in lines if ln["phase"] in phases]
     )
     ckpt = bv.checkpoint_path(cfg)
-    rows, pending = [], []
+    godot_dir = None if (args.no_godot or args.no_ogg) else Path(args.godot_dir)
+    rows, pending, kept = [], [], []
     for key in select_cells(m, args.cells):
         c = m["cells"][key]
         ref = str(c.get("ref_wav") or "").strip()
@@ -258,6 +259,12 @@ def cmd_matrix_build(args: argparse.Namespace) -> None:
             out = MATRIX_VOICES / cell_dir(key) / f"{ln['id']}.wav"
             if args.skip_existing and out.is_file():
                 continue
+            race, body = key.split(":")
+            if godot_dir is not None and not args.force:
+                # Godot 側に同名があれば手修正を守って作らない（--force で上書き）
+                if (godot_dir / race / body / f"{ln['id']}.ogg").is_file():
+                    kept.append(f"{race}/{body}/{ln['id']}.ogg")
+                    continue
             rows.append(
                 bv.row(
                     text=ln["text"],
@@ -272,6 +279,8 @@ def cmd_matrix_build(args: argparse.Namespace) -> None:
             )
     if pending:
         print(f"[matrix-build] 未採用のため対象外: {', '.join(pending)}")
+    if kept:
+        print(f"[matrix-build] Godot に既存のため作らない（--force で上書き）: {len(kept)} 本")
     manifest = bv.write_manifest(rows, "matrix_build")
     if args.dry_run:
         bv.show_dry_run(manifest, rows)
@@ -280,7 +289,6 @@ def cmd_matrix_build(args: argparse.Namespace) -> None:
         bv.run_batch(manifest, MATRIX_VOICES / "timings.jsonl")
     if args.no_ogg:
         return
-    godot_dir = None if args.no_godot else Path(args.godot_dir)
     n = 0
     for r in rows:
         wav = Path(r["out_path"])
@@ -465,7 +473,7 @@ def cmd_matrix_serve(args: argparse.Namespace) -> None:
 
 def add_subcommands(sub) -> None:
     a = sub.add_parser("matrix-audition", help="未採用 compose セルを seed 候補×2行で生成")
-    a.add_argument("--cells", help="race:body をカンマ区切り（* 可。例 inu:*,*:slender）")
+    a.add_argument("--cells", help="race:body をカンマ区切り（* 可。例 inu:*,*:kogara）")
     a.add_argument("--seeds", help="カンマ区切り（既定: voice_matrix.json の audition_seeds）")
     a.add_argument("--skip-existing", action="store_true")
     a.add_argument("--dry-run", action="store_true")
@@ -482,6 +490,9 @@ def add_subcommands(sub) -> None:
     b.add_argument("--lines", nargs="+")
     b.add_argument("--godot-dir", default=str(GODOT_VOICES))
     b.add_argument("--no-godot", action="store_true", help="Godot へ書き出さない")
+    b.add_argument(
+        "--force", action="store_true", help="Godot 側に同名 ogg があっても作り直して上書きする"
+    )
     b.add_argument("--no-ogg", action="store_true")
     b.add_argument("--skip-existing", action="store_true")
     b.add_argument("--dry-run", action="store_true")

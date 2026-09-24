@@ -70,9 +70,9 @@
   ],
   "bodies": [
     {
-      "id": "slender",
-      "name": "スレンダー",
-      "voice": "あどけなさの残る、高めの声の20歳前後の女性。"
+      "id": "kogara",
+      "name": "小柄",
+      "voice": "小柄で華奢な、若々しく高めの声の成人女性。"
     },
     {
       "id": "standard",
@@ -86,11 +86,11 @@
     }
   ],
   "cells": {
-    "human:slender": {
+    "human:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 101,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/human_kogara.wav"
     },
     "human:standard": {
       "mode": "compose",
@@ -104,11 +104,11 @@
       "seed": 202,
       "ref_wav": "projects/dorei_shokan_voices/refs/onesan.wav"
     },
-    "elf:slender": {
+    "elf:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/elf_kogara.wav"
     },
     "elf:standard": {
       "mode": "preset",
@@ -122,11 +122,11 @@
       "seed": 0,
       "ref_wav": ""
     },
-    "dark_elf:slender": {
+    "dark_elf:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 303,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/dark_elf_kogara.wav"
     },
     "dark_elf:standard": {
       "mode": "preset",
@@ -140,11 +140,11 @@
       "seed": 0,
       "ref_wav": ""
     },
-    "harpy:slender": {
+    "harpy:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/harpy_kogara.wav"
     },
     "harpy:standard": {
       "mode": "compose",
@@ -158,11 +158,11 @@
       "seed": 0,
       "ref_wav": ""
     },
-    "inu:slender": {
+    "inu:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/inu_kogara.wav"
     },
     "inu:standard": {
       "mode": "preset",
@@ -173,14 +173,14 @@
     "inu:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 101,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/inu_glamour.wav"
     },
-    "neko:slender": {
+    "neko:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/neko_kogara.wav"
     },
     "neko:standard": {
       "mode": "preset",
@@ -191,14 +191,14 @@
     "neko:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 303,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/neko_glamour.wav"
     },
-    "kitsune:slender": {
+    "kitsune:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/kitsune_kogara.wav"
     },
     "kitsune:standard": {
       "mode": "compose",
@@ -212,11 +212,11 @@
       "seed": 0,
       "ref_wav": ""
     },
-    "usagi:slender": {
+    "usagi:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 303,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/usagi_kogara.wav"
     },
     "usagi:standard": {
       "mode": "preset",
@@ -227,14 +227,14 @@
     "usagi:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/usagi_glamour.wav"
     },
-    "ushi:slender": {
+    "ushi:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 101,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/ushi_kogara.wav"
     },
     "ushi:standard": {
       "mode": "compose",
@@ -248,11 +248,11 @@
       "seed": 0,
       "ref_wav": ""
     },
-    "succubus:slender": {
+    "succubus:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/succubus_kogara.wav"
     },
     "succubus:standard": {
       "mode": "compose",
@@ -266,11 +266,11 @@
       "seed": 0,
       "ref_wav": ""
     },
-    "oni:slender": {
+    "oni:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 303,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/oni_kogara.wav"
     },
     "oni:standard": {
       "mode": "compose",
@@ -284,11 +284,11 @@
       "seed": 0,
       "ref_wav": ""
     },
-    "ryujin:slender": {
+    "ryujin:kogara": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 404,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/ryujin_kogara.wav"
     },
     "ryujin:standard": {
       "mode": "compose",

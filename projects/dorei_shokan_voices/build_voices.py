@@ -25,8 +25,8 @@
 種族×体型の割り当て（voice_matrix.json、実体は voice_matrix.py）::
 
     uv run python projects/dorei_shokan_voices/build_voices.py matrix-serve     # 設定ページ
-    uv run python projects/dorei_shokan_voices/build_voices.py matrix-audition --cells "inu:*,*:slender"
-    uv run python projects/dorei_shokan_voices/build_voices.py matrix-adopt inu:slender 303
+    uv run python projects/dorei_shokan_voices/build_voices.py matrix-audition --cells "inu:*,*:kogara"
+    uv run python projects/dorei_shokan_voices/build_voices.py matrix-adopt inu:kogara 303
     uv run python projects/dorei_shokan_voices/build_voices.py matrix-build     # → Godot assets/voices
 
 ``--dry-run`` はマニフェストを書いて先頭行と本数を表示するだけで GPU を使わない。
