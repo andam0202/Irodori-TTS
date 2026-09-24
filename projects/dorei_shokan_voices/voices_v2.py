@@ -40,6 +40,11 @@ MIN_SEC, MAX_SEC = 0.5, 12.0  # 生テイクの長さの許容（末尾パディ
 SILENT_PEAK = 0.03  # これ未満のピークは無音扱い
 TRIM_DB, PRE_MS, POST_MS = -45.0, 50, 150
 TARGET_LUFS, PEAK_DBTP = -16.0, -1.0
+# 所要時間の見積もり（inu:standard パイロットの実測: 読み込み 135〜190 秒、合成 2.9 秒/本、
+# 取り直し 1 巡目 5/56・2 巡目 1/56、類似度は起動 15 秒 + 0.6 秒/本、後処理・ogg 0.3 秒/本）
+EST_LOAD_SEC, EST_SYNTH_SEC = 170.0, 2.9
+EST_RETAKE = (5 / 56, 1 / 56)
+EST_SCORE_START_SEC, EST_SCORE_SEC, EST_POST_SEC = 15.0, 0.6, 0.3
 
 
 # --------------------------------------------------------------------------- データ
@@ -67,6 +72,7 @@ def cell_refs(m: dict, key: str) -> dict:
     for p in (talk, moan):
         if not p.is_file():
             raise SystemExit(f"{key}: 参照音声が無い: {p}")
+    # 台本 v2 は台詞なし（全行喘ぎ参照）。speech は旧台本・将来用に残す
     return {"speech": talk, "moan": moan, "breath": moan}
 
 
@@ -157,6 +163,76 @@ def score(jobs: list[dict], work: Path) -> dict:
     return json.loads(op.read_text(encoding="utf-8"))
 
 
+class ResidentTTS:
+    """1 プロセスでモデルを 1 回だけ読み、全セル・全ラウンド（1 巡目＋取り直し）を合成する。
+
+    ``scripts/batch_infer.py`` の関数（マニフェスト読み込み・ランタイム構築・1 行合成）を import して
+    使い、モデルを取り直しのラウンドをまたいで保持する（``run_batch`` はラウンドごとに別プロセスで
+    読み直すため 1 回約 150〜190 秒かかっていた）。import できないときは ``run_batch`` に戻る。
+    """
+
+    def __init__(self) -> None:
+        self.runtime = None
+        self.bi = None
+        self.load_count = 0
+        try:
+            import importlib.util  # noqa: PLC0415
+
+            spec = importlib.util.spec_from_file_location("batch_infer", bv.BATCH_INFER)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            for name in ("_load_manifest", "_load_runtime_for_checkpoint", "_synthesize_one"):
+                getattr(mod, name)
+            self.bi = mod
+        except Exception as e:  # noqa: BLE001 - 内部 API が変わったら従来方式に戻る
+            print(f"[v2] batch_infer の関数を使えないので別プロセス方式にする: {e}", flush=True)
+
+    def run(self, rows: list[dict], name: str) -> None:
+        manifest = bv.write_manifest(rows, name)
+        if self.bi is None:
+            bv.run_batch(manifest, V2_OUT / "timings.jsonl")
+            self.load_count += 1
+            return
+        bi = self.bi
+        records = bi._load_manifest(manifest, root=bv.REPO)
+        t0 = time.monotonic()
+        ok = fail = 0
+        for rec in records:
+            try:
+                if self.runtime is None:
+                    t = time.monotonic()
+                    self.runtime = bi._load_runtime_for_checkpoint(
+                        rec["checkpoint"],
+                        model_device_str=bi.default_runtime_device(),
+                        model_precision="fp32",
+                        codec_device_str=bi.default_runtime_device(),
+                    )
+                    self.ckpt = rec["checkpoint"]
+                    self.load_count += 1
+                    print(f"[v2] モデル読み込み {time.monotonic() - t:.0f} 秒", flush=True)
+                if rec["checkpoint"] != self.ckpt:
+                    raise RuntimeError("checkpoint が行ごとに違う（v2 は 1 本前提）")
+                bi._synthesize_one(
+                    self.runtime,
+                    text=rec["text"],
+                    caption=rec["caption"],
+                    ref_wav=rec["ref_wav"],
+                    seed=rec["seed"],
+                    tail_fade_ms=rec["tail_fade_ms"],
+                    tail_pad_out_ms=rec["tail_pad_out_ms"],
+                    duration_scale=rec["duration_scale"],
+                    num_steps=rec["num_steps"],
+                    out_path=rec["out_path"],
+                )
+                ok += 1
+            except Exception as e:  # noqa: BLE001 - 1 行の失敗で止めない（判定で取り直しになる）
+                fail += 1
+                print(f"[v2] 合成失敗 {rec['out_path']}: {e}", flush=True)
+            if (ok + fail) % 50 == 0:
+                print(f"[v2] {name}: {ok + fail}/{len(records)}", flush=True)
+        print(f"[v2] {name}: ok={ok} fail={fail}（{time.monotonic() - t0:.0f} 秒）", flush=True)
+
+
 def cmd_v2_build(args: argparse.Namespace) -> None:
     m = vm.load_matrix()
     cfg = bv.load_presets(args.presets_file)
@@ -221,9 +297,26 @@ def cmd_v2_build(args: argparse.Namespace) -> None:
         bv.show_dry_run(manifest, rows)
         per = {k: sum(1 for r in rows if r["cell"] == k) for k in keys}
         print(f"[dry-run] セルごとの行数: {per}")
+        n = len(rows)
+        r1, r2 = n * EST_RETAKE[0], n * EST_RETAKE[1]
+        rounds = 1 + (r1 > 0) + (r2 > 0)
+        est = (
+            EST_LOAD_SEC
+            + (n + r1 + r2) * EST_SYNTH_SEC
+            + rounds * EST_SCORE_START_SEC
+            + (n + r1 + r2) * EST_SCORE_SEC
+            + n * EST_POST_SEC
+        )
+        print(
+            f"[dry-run] モデル読み込み 1 回（取り直しも同じプロセスで続けて合成）／"
+            f" 1 巡目 {n} 本 + 取り直し見込み {r1:.0f} + {r2:.0f} 本"
+            f"（パイロットの率 {EST_RETAKE[0]:.0%}・{EST_RETAKE[1]:.0%}）"
+        )
+        print(f"[dry-run] 推定所要時間 約 {est / 60:.0f} 分（{est / 3600:.1f} 時間）")
         return
 
     t0 = time.monotonic()
+    tts = ResidentTTS()
     by_id = {ln["id"]: ln for ln in lines}
     work = V2_OUT / "_work"
     work.mkdir(parents=True, exist_ok=True)
@@ -231,7 +324,7 @@ def cmd_v2_build(args: argparse.Namespace) -> None:
     for rnd in range(args.max_retakes + 1):
         if not rows:
             break
-        bv.run_batch(bv.write_manifest(rows, f"v2_build_r{rnd}"), V2_OUT / "timings.jsonl")
+        tts.run(rows, f"v2_build_r{rnd}")
         counts["generated"] += len(rows)
         if rnd:
             counts["retaken"] += len(rows)

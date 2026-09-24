@@ -1,9 +1,10 @@
 # 部屋（プレイの種類）ごとの台本 v2。各キャラ（voice_matrix の 36 セル）共通、1 種類 7 行。
+# 台詞は無し（2026-09-25 ユーザー指示）。内訳: 吐息1・弱い喘ぎ2・中くらいの喘ぎ1・強い喘ぎ2・絶頂1、すべて擬音のみ。
 # ゲームでは部屋のプレイ種類の行からランダムに流す（同じ行の連続は避ける）。climax = true の行は行為の終わりにだけ流す。
-#   id             … <play>_<種別><nn>（b=吐息 m=喘ぎ s=台詞 c=絶頂）
+#   id             … <play>_<種別><nn>（b=吐息 m=喘ぎ c=絶頂。m05 は中くらいの喘ぎ）
 #   play           … wall / chair / bed / sofa / kingbed / whip / horse / pleasure
-#   kind           … breath / moan / speech（参照音声の使い分け: breath・moan = セルの喘ぎ参照、speech = 台詞参照）
-#   level          … soft（弱い喘ぎ）/ hard（強い喘ぎ）
+#   kind           … breath / moan（参照音声はどちらもセルの喘ぎ参照）
+#   level          … soft（弱い）/ mid（中くらい）/ hard（強い）
 #   climax         … true なら絶頂行
 #   style          … セルの caption の後ろに足す演技（口調はセルの caption が担う）
 #   duration_scale … 喘ぎ・吐息は 1.3
@@ -47,6 +48,15 @@ style = "今は恥ずかしさに身を縮め、押し殺した声がかすか�
 duration_scale = 1.3
 
 [[line]]
+id = "wall_m05"
+play = "wall"
+kind = "moan"
+level = "mid"
+text = "んっ……んんっ……あっ……っ……"
+style = "今は押し殺しきれない声が少しずつ漏れ、くぐもった声で喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
 id = "wall_m03"
 play = "wall"
 kind = "moan"
@@ -63,13 +73,6 @@ level = "hard"
 text = "あっ、あっ……んぐっ……あぁっ……！"
 style = "今は必死にこらえようとしても、震える声が大きく漏れて喘いでいる。言葉は無い。"
 duration_scale = 1.3
-
-[[line]]
-id = "wall_s01"
-play = "wall"
-kind = "speech"
-text = "だ、誰……なの……？"
-style = "今は顔の見えない相手に、不安と恥ずかしさで震える小声で話している。"
 
 [[line]]
 id = "wall_c01"
@@ -109,6 +112,15 @@ style = "今は体をぴったり寄せて、耳元で甘い声を小さく漏�
 duration_scale = 1.3
 
 [[line]]
+id = "chair_m05"
+play = "chair"
+kind = "moan"
+level = "mid"
+text = "あんっ……んっ、あっ……あぁん……"
+style = "今は相手に抱きつき、耳元で甘い声を少しずつ大きくして喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
 id = "chair_m03"
 play = "chair"
 kind = "moan"
@@ -125,13 +137,6 @@ level = "hard"
 text = "んあっ……あっ、あぁっ……！"
 style = "今は相手の首にしがみつき、耳元で甘く高い声を上げて喘いでいる。言葉は無い。"
 duration_scale = 1.3
-
-[[line]]
-id = "chair_s01"
-play = "chair"
-kind = "speech"
-text = "ぎゅって……して……？"
-style = "今は耳元で、甘えるように囁いている。"
 
 [[line]]
 id = "chair_c01"
@@ -171,6 +176,15 @@ style = "今は優しく抱かれて、甘い声を素直に漏らしている�
 duration_scale = 1.3
 
 [[line]]
+id = "bed_m05"
+play = "bed"
+kind = "moan"
+level = "mid"
+text = "あっ……あんっ、あっ……はぁんっ……"
+style = "今は見つめ合ったまま、甘い声が少しずつ大きくなって喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
 id = "bed_m03"
 play = "bed"
 kind = "moan"
@@ -187,13 +201,6 @@ level = "hard"
 text = "あぁっ……あっ、あっ、あぁんっ……"
 style = "今は見つめ合ったまま高まり、甘い声を抑えずに強く喘いでいる。言葉は無い。"
 duration_scale = 1.3
-
-[[line]]
-id = "bed_s01"
-play = "bed"
-kind = "speech"
-text = "すき……だいすき……"
-style = "今は見つめ合いながら、とろけた甘い声で素直に話している。"
 
 [[line]]
 id = "bed_c01"
@@ -233,6 +240,15 @@ style = "今は楽しむように自分から動き、弾む息の合間に小�
 duration_scale = 1.3
 
 [[line]]
+id = "sofa_m05"
+play = "sofa"
+kind = "moan"
+level = "mid"
+text = "んっ、あっ、あんっ……はぁっ、あっ……"
+style = "今は自分から動くリズムが速くなり、弾む息と一緒に声が大きくなって喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
 id = "sofa_m03"
 play = "sofa"
 kind = "moan"
@@ -249,13 +265,6 @@ level = "hard"
 text = "はぁっ、あぁっ……んあっ、あっ……！"
 style = "今は自分の動きで高まり、息を切らしながら強く喘いでいる。言葉は無い。"
 duration_scale = 1.3
-
-[[line]]
-id = "sofa_s01"
-play = "sofa"
-kind = "speech"
-text = "ねえ……気持ちいい……？"
-style = "今は自分から動きながら、息を弾ませて得意げに話している。"
 
 [[line]]
 id = "sofa_c01"
@@ -295,6 +304,15 @@ style = "今は長く続く快感に浸り、甘い声を長く伸ばして喘�
 duration_scale = 1.3
 
 [[line]]
+id = "kingbed_m05"
+play = "kingbed"
+kind = "moan"
+level = "mid"
+text = "あぁん……あっ、あぁっ……んぅ、あぁ……"
+style = "今は長い快感に浸りながら、甘い声がしだいに熱を帯びて喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
 id = "kingbed_m03"
 play = "kingbed"
 kind = "moan"
@@ -311,13 +329,6 @@ level = "hard"
 text = "あぁぁっ……あっ、あっ……んんっ、あぁぁっ……"
 style = "今は波のように繰り返し高まり、声を震わせて強く喘いでいる。言葉は無い。"
 duration_scale = 1.3
-
-[[line]]
-id = "kingbed_s01"
-play = "kingbed"
-kind = "speech"
-text = "もう……おかしくなっちゃう……"
-style = "今は長く続く快感に溺れ、とろけきった声で話している。"
 
 [[line]]
 id = "kingbed_c01"
@@ -357,6 +368,15 @@ style = "今は打たれた痛みの悲鳴に、わずかに甘さが混じり�
 duration_scale = 1.3
 
 [[line]]
+id = "whip_m05"
+play = "whip"
+kind = "moan"
+level = "mid"
+text = "あぅっ……！　あっ……あぁん……"
+style = "今は打たれる痛みの声に、はっきりと甘さが混じってきて喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
 id = "whip_m03"
 play = "whip"
 kind = "moan"
@@ -373,13 +393,6 @@ level = "hard"
 text = "あぁっ……！　んあぁっ……あぁんっ……！"
 style = "今は痛みと快感が混ざり合い、甘い悲鳴を強く上げている。言葉は無い。"
 duration_scale = 1.3
-
-[[line]]
-id = "whip_s01"
-play = "whip"
-kind = "speech"
-text = "もっと……打って、ください……"
-style = "今は痛みに震えながら、甘くとろけた声で懇願している。"
 
 [[line]]
 id = "whip_c01"
@@ -419,6 +432,15 @@ style = "今は揺れるたびに、苦しげな小さい声が途切れ途切�
 duration_scale = 1.3
 
 [[line]]
+id = "horse_m05"
+play = "horse"
+kind = "moan"
+level = "mid"
+text = "うぅっ……あっ、くぅ……あぁっ……"
+style = "今は揺れに耐えながら、苦しげな声が少しずつ大きくなって喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
 id = "horse_m03"
 play = "horse"
 kind = "moan"
@@ -435,13 +457,6 @@ level = "hard"
 text = "くぅっ……あっ、あぁっ……うぅぅっ……！"
 style = "今は激しい揺れに耐えきれず、苦しげな声を震わせて強く喘いでいる。言葉は無い。"
 duration_scale = 1.3
-
-[[line]]
-id = "horse_s01"
-play = "horse"
-kind = "speech"
-text = "もう……むり……ですっ……"
-style = "今は揺れに耐えきれず、苦しげに途切れ途切れに話している。"
 
 [[line]]
 id = "horse_c01"
@@ -481,6 +496,15 @@ style = "今は触れられるたびに、我慢しきれない甘い声が小�
 duration_scale = 1.3
 
 [[line]]
+id = "pleasure_m05"
+play = "pleasure"
+kind = "moan"
+level = "mid"
+text = "あっ、あっ……んんっ、あぁっ……"
+style = "今は焦らされ続けて我慢が効かなくなり、声が大きくなってきて喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
 id = "pleasure_m03"
 play = "pleasure"
 kind = "moan"
@@ -497,13 +521,6 @@ level = "hard"
 text = "あぁぁっ……あっ、あっ、あっ……！"
 style = "今は限界まで高められ、泣きそうな声で強く喘いでいる。言葉は無い。"
 duration_scale = 1.3
-
-[[line]]
-id = "pleasure_s01"
-play = "pleasure"
-kind = "speech"
-text = "おねがい……もう、いかせて……っ"
-style = "今は焦らされ続けて、泣きそうな声で懇願している。"
 
 [[line]]
 id = "pleasure_c01"
