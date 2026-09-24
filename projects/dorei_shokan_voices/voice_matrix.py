@@ -207,23 +207,50 @@ def cmd_matrix_adopt(args: argparse.Namespace) -> None:
 
 
 def write_godot_index(godot_dir: Path, lines: list[dict]) -> Path:
-    """godot_dir 配下の <race>/<body>/<line>.ogg を走査して voices_index.json を書く。"""
-    phase_of = {ln["id"]: ln["phase"] for ln in lines}
-    kind_of = {ln["id"]: ln.get("kind", "") for ln in lines}
-    index: dict = {}
+    """godot_dir 配下の ogg を走査して voices_index.json を書く。
+
+    - "voices": 旧台本（lines.toml）の <race>/<body>/<line>.ogg → race > body > phase > line
+    - "plays" : 台本 v2（lines_v2.toml）の <race>/<body>/<play>/<line>.ogg
+      → race > body > play > [{line, path, kind, level, climax}]
+    """
+    meta = {ln["id"]: ln for ln in lines}
+    voices: dict = {}
     for ogg in sorted(godot_dir.glob("*/*/*.ogg")):
-        body_dir = ogg.parent
-        race, body, line = body_dir.parent.name, body_dir.name, ogg.stem
-        phase = phase_of.get(line, "other")
+        race, body, line = ogg.parent.parent.name, ogg.parent.name, ogg.stem
+        ln = meta.get(line, {})
         rel = ogg.relative_to(godot_dir).as_posix()
-        index.setdefault(race, {}).setdefault(body, {}).setdefault(phase, {})[line] = {
-            "path": f"{GODOT_RES_PREFIX}/{rel}",
-            "kind": kind_of.get(line, ""),
-        }
+        voices.setdefault(race, {}).setdefault(body, {}).setdefault(ln.get("phase", "other"), {})[
+            line
+        ] = {"path": f"{GODOT_RES_PREFIX}/{rel}", "kind": ln.get("kind", "")}
+    plays: dict = {}
+    for ogg in sorted(godot_dir.glob("*/*/*/*.ogg")):
+        race, body, play = ogg.parents[2].name, ogg.parents[1].name, ogg.parent.name
+        if race == "mock":
+            continue
+        ln = meta.get(ogg.stem, {})
+        rel = ogg.relative_to(godot_dir).as_posix()
+        plays.setdefault(race, {}).setdefault(body, {}).setdefault(play, []).append(
+            {
+                "line": ogg.stem,
+                "path": f"{GODOT_RES_PREFIX}/{rel}",
+                "kind": ln.get("kind", ""),
+                "level": ln.get("level", ""),
+                "climax": bool(ln.get("climax", False)),
+            }
+        )
     dst = godot_dir / "voices_index.json"
     dst.write_text(
         json.dumps(
-            {"format": "race > body > phase > line", "voices": index}, ensure_ascii=False, indent=2
+            {
+                "format": {
+                    "voices": "race > body > phase > line（旧台本）",
+                    "plays": "race > body > play > [line]（台本 v2。climax は行為の終わり用）",
+                },
+                "voices": voices,
+                "plays": plays,
+            },
+            ensure_ascii=False,
+            indent=2,
         )
         + "\n",
         encoding="utf-8",

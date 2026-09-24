@@ -489,6 +489,10 @@ def main() -> None:
     import voice_matrix
 
     voice_matrix.add_subcommands(sub)
+    # 台本 v2（部屋＝プレイの種類ごと 7 行）。実体は voices_v2.py
+    import voices_v2
+
+    voices_v2.add_subcommands(sub)
 
     args = ap.parse_args()
     args.func(args)
