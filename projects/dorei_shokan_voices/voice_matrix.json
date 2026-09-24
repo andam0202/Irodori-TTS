@@ -25,7 +25,7 @@
     {
       "id": "harpy",
       "name": "ハーピー",
-      "tone": "高く澄んだ声で、歌うように抑揚をつけて話す。"
+      "tone": "少し軽やかな声で、語尾がわずかに弾むように話す。"
     },
     {
       "id": "inu",
@@ -119,8 +119,8 @@
     "elf:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/elf_glamour.wav"
     },
     "dark_elf:kogara": {
       "mode": "compose",
@@ -137,8 +137,8 @@
     "dark_elf:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 404,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/dark_elf_glamour.wav"
     },
     "harpy:kogara": {
       "mode": "compose",
@@ -239,14 +239,14 @@
     "ushi:standard": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 303,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/ushi_standard.wav"
     },
     "ushi:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/ushi_glamour.wav"
     },
     "succubus:kogara": {
       "mode": "compose",
@@ -257,14 +257,14 @@
     "succubus:standard": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/succubus_standard.wav"
     },
     "succubus:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 101,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/succubus_glamour.wav"
     },
     "oni:kogara": {
       "mode": "compose",
@@ -275,14 +275,14 @@
     "oni:standard": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/oni_standard.wav"
     },
     "oni:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/oni_glamour.wav"
     },
     "ryujin:kogara": {
       "mode": "compose",
@@ -293,14 +293,14 @@
     "ryujin:standard": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 303,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/ryujin_standard.wav"
     },
     "ryujin:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/ryujin_glamour.wav"
     }
   }
 }

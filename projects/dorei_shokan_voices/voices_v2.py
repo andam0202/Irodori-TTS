@@ -21,6 +21,8 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -40,6 +42,12 @@ MIN_SEC, MAX_SEC = 0.5, 12.0  # 生テイクの長さの許容（末尾パディ
 SILENT_PEAK = 0.03  # これ未満のピークは無音扱い
 TRIM_DB, PRE_MS, POST_MS = -45.0, 50, 150
 TARGET_LUFS, PEAK_DBTP = -16.0, -1.0
+# ラウドネス基準（LOUDNESS.md）。行の種類ごとの Integrated の目標、許容 ±1 LU、True Peak -1 dBTP 以下
+LOUDNESS_TARGETS = {"breath": -20.0, "soft": -18.0, "mid": -16.0, "hard": -14.0, "climax": -14.0}
+LOUDNESS_TOL = 1.0
+WAV_CEILING_DBTP = -1.5  # ogg 化での inter-sample peak の増えを見込んで wav は -1.5 に抑える
+WAV_CEILINGS = (-1.5, -2.5, -3.5, -5.0)  # ogg の True Peak が超えたら順に下げて作り直す
+OGG_Q = "3"  # vorbis q3（約 112kbps 相当、声には十分でサイズを抑える）
 # 所要時間の見積もり（inu:standard パイロットの実測: 読み込み 135〜190 秒、合成 2.9 秒/本、
 # 取り直し 1 巡目 5/56・2 巡目 1/56、類似度は起動 15 秒 + 0.6 秒/本、後処理・ogg 0.3 秒/本）
 EST_LOAD_SEC, EST_SYNTH_SEC = 170.0, 2.9
@@ -101,7 +109,33 @@ def _true_peak(y: np.ndarray) -> float:
     return float(np.abs(resample_poly(y, 4, 1)).max()) if len(y) else 0.0
 
 
-def postprocess(src: Path, dst: Path) -> dict:
+def loudness_class(ln: dict) -> str:
+    if ln.get("climax"):
+        return "climax"
+    if ln["kind"] == "breath":
+        return "breath"
+    return ln.get("level") or "mid"
+
+
+def _limit(y: np.ndarray, ceiling: float) -> tuple[np.ndarray, bool]:
+    """頭だけ tanh で丸め、残る inter-sample peak は全体をわずかに下げる。"""
+    knee = ceiling * 0.7
+    over = np.abs(y) > knee
+    limited = bool(over.any())
+    if limited:
+        mag = np.abs(y[over])
+        y[over] = np.sign(y[over]) * (
+            knee + (ceiling - knee) * np.tanh((mag - knee) / (ceiling - knee))
+        )
+    tp = _true_peak(y)
+    if tp > ceiling:
+        y = y * (ceiling / tp)
+    return y, limited
+
+
+def postprocess(
+    src: Path, dst: Path, target: float = TARGET_LUFS, ceiling_db: float = WAV_CEILING_DBTP
+) -> dict:
     import pyloudnorm as pyln  # noqa: PLC0415
 
     y, sr = sf.read(src, dtype="float64", always_2d=False)
@@ -120,30 +154,31 @@ def postprocess(src: Path, dst: Path) -> dict:
     fi, fo = int(sr * 0.005), int(sr * 0.03)
     y[:fi] *= np.linspace(0, 1, fi)[: len(y[:fi])]
     y[-fo:] *= np.linspace(1, 0, fo)[-len(y[-fo:]) :]
-    if len(y) / sr >= 0.4:
-        lufs = pyln.Meter(sr).integrated_loudness(y)
-    else:  # ゲート窓より短いものは RMS で近似
-        lufs = 20 * np.log10(np.sqrt(np.mean(y**2)) + 1e-12)
-    gain_db = TARGET_LUFS - lufs if np.isfinite(lufs) else 0.0
-    y = y * 10 ** (gain_db / 20)
-    ceiling = 10 ** (PEAK_DBTP / 20)
-    limited = False
-    knee = ceiling * 0.7
-    over = np.abs(y) > knee
-    if over.any():  # 頭だけ tanh で丸める（全体を下げるとラウドネスが大きく落ちるため）
-        mag = np.abs(y[over])
-        y[over] = np.sign(y[over]) * (
-            knee + (ceiling - knee) * np.tanh((mag - knee) / (ceiling - knee))
-        )
-        limited = True
-    tp = _true_peak(y)
-    if tp > ceiling:  # 丸めても残る inter-sample peak はわずかに全体を下げる
-        y = y * (ceiling / tp)
+    meter = pyln.Meter(sr)
+
+    def measure(x: np.ndarray) -> float:
+        if len(x) / sr >= 0.4:
+            v = meter.integrated_loudness(x)
+            if np.isfinite(v):
+                return float(v)
+        return float(20 * np.log10(np.sqrt(np.mean(x**2)) + 1e-12))  # 短すぎるものは RMS
+
+    base = y.copy()
+    ceiling = 10 ** (ceiling_db / 20)
+    gain_db, limited = 0.0, False
+    # 丸めでラウドネスが下がる分を見込んで、目標に入るまでゲインを詰める（最大 6 回）
+    for _ in range(6):
+        y, limited = _limit(base * 10 ** (gain_db / 20), ceiling)
+        err = target - measure(y)
+        if abs(err) <= 0.2:
+            break
+        gain_db += err
     dst.parent.mkdir(parents=True, exist_ok=True)
     sf.write(dst, y.astype(np.float32), sr, subtype="PCM_16")
     return {
         "final_sec": round(len(y) / sr, 2),
         "gain_db": round(float(gain_db), 1),
+        "target": target,
         "peak_limited": limited,
     }
 
@@ -373,7 +408,11 @@ def cmd_v2_build(args: argparse.Namespace) -> None:
                 continue
             best = max(ok, key=lambda t: t.get("sim") or 0)
             v["chosen"] = best["seed"]
-            v["post"] = postprocess(bv.OUT / best["path"], info[k]["dir"] / "final" / f"{lid}.wav")
+            v["post"] = postprocess(
+                bv.OUT / best["path"],
+                info[k]["dir"] / "final" / f"{lid}.wav",
+                LOUDNESS_TARGETS[loudness_class(by_id[lid])],
+            )
         state[k]["_meta"] = {"caption": info[k]["caption"], "seed": info[k]["seed"]}
         (info[k]["dir"] / "takes.json").write_text(
             json.dumps(state[k], ensure_ascii=False, indent=1), encoding="utf-8"
@@ -395,27 +434,193 @@ def cmd_v2_build(args: argparse.Namespace) -> None:
         )
     if not args.no_godot:
         export(keys, state, lines, Path(args.godot_dir), args.force)
+    else:
+        print("[v2] Godot へは書き出していない（v2-export で基準適用・実測・書き出し）")
 
 
-def export(keys: list[str], state: dict, lines: list[dict], godot_dir: Path, force: bool) -> None:
+def measure_file(path: Path) -> tuple[float, float]:
+    """ffmpeg ebur128 で (Integrated LUFS, True Peak dBTP) を測る。"""
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-nostats",
+            "-hide_banner",
+            "-i",
+            str(path),
+            "-af",
+            "ebur128=peak=true",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    tail = r.stderr[r.stderr.rfind("Summary:") :]
+    i = re.search(r"I:\s+(-?[\d.]+|-inf) LUFS", tail)
+    pk = re.search(r"Peak:\s+(-?[\d.]+|-inf) dBFS", tail)
+    f = lambda m: float("-inf") if m is None or m.group(1) == "-inf" else float(m.group(1))  # noqa: E731
+    return f(i), f(pk)
+
+
+def encode_ogg(src: Path, dst: Path, gain_db: float = 0.0) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    af = ["-af", f"volume={gain_db:.2f}dB"] if abs(gain_db) > 1e-3 else []
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            str(src),
+            *af,
+            "-ac",
+            "1",
+            "-ar",
+            "44100",
+            "-c:a",
+            "libvorbis",
+            "-q:a",
+            OGG_Q,
+            str(dst),
+        ],
+        check=True,
+    )
+
+
+def export(
+    keys: list[str],
+    state: dict,
+    lines: list[dict],
+    godot_dir: Path | None,
+    force: bool,
+    repost: bool = True,
+) -> dict:
+    """final wav（必要なら基準で後処理し直し）→ ogg（出力側に仮置き）→ 実測・外れを直す → Godot へ。"""
     by_id = {ln["id"]: ln for ln in lines}
-    n = kept = 0
+    report = []
+    t0 = time.monotonic()
     for k in keys:
         race, body = k.split(":")
-        for lid in state[k]:
-            if lid.startswith("_") or lid not in by_id:
+        d = V2_OUT / vm.cell_dir(k)
+        for lid, v in state[k].items():
+            if lid.startswith("_") or lid not in by_id or not v.get("chosen"):
                 continue
-            src = V2_OUT / vm.cell_dir(k) / "final" / f"{lid}.wav"
-            if not src.is_file():
-                continue
-            dst = godot_dir / race / body / by_id[lid]["play"] / f"{lid}.ogg"
+            ln = by_id[lid]
+            cls = loudness_class(ln)
+            target = LOUDNESS_TARGETS[cls]
+            wav = d / "final" / f"{lid}.wav"
+            take = next(t for t in v["takes"] if t["seed"] == v["chosen"])
+            ogg = d / "ogg" / ln["play"] / f"{lid}.ogg"
+            fixed = 0
+            # vorbis 化でピークが増えることがあるので、外れたら wav の上限を下げて作り直す
+            for i, ceil in enumerate(WAV_CEILINGS):
+                if repost or i or not wav.is_file():
+                    v["post"] = postprocess(bv.OUT / take["path"], wav, target, ceil)
+                encode_ogg(wav, ogg)
+                lufs, tp = measure_file(ogg)
+                if abs(target - lufs) > LOUDNESS_TOL and tp - (target - lufs) <= PEAK_DBTP:
+                    encode_ogg(wav, ogg, target - lufs)  # ラウドネスだけのずれは ogg 側で補正
+                    lufs, tp = measure_file(ogg)
+                if abs(target - lufs) <= LOUDNESS_TOL and tp <= PEAK_DBTP:
+                    break
+                fixed += 1
+            ok = abs(target - lufs) <= LOUDNESS_TOL and tp <= PEAK_DBTP
+            report.append(
+                {
+                    "cell": k,
+                    "line": lid,
+                    "class": cls,
+                    "target": target,
+                    "lufs": lufs,
+                    "tp": tp,
+                    "ok": ok,
+                    "refixed": fixed,
+                    "bytes": ogg.stat().st_size,
+                    "ogg": str(ogg),
+                }
+            )
+        (d / "takes.json").write_text(
+            json.dumps(state[k], ensure_ascii=False, indent=1), encoding="utf-8"
+        )
+    print(f"[v2] ogg 化と実測 {len(report)} 本（{time.monotonic() - t0:.0f} 秒）")
+    n = kept = 0
+    if godot_dir is not None:
+        for r in report:
+            race, body = r["cell"].split(":")
+            dst = godot_dir / race / body / by_id[r["line"]]["play"] / f"{r['line']}.ogg"
             if dst.is_file() and not force:  # 手修正を守る
                 kept += 1
                 continue
-            bv.to_ogg(src, dst)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(r["ogg"], dst)
             n += 1
-    print(f"[v2] Godot へ ogg {n} 本（既存のため残した {kept} 本）")
-    print(f"[v2] 索引: {vm.write_godot_index(godot_dir, bv.load_lines(bv.LINES_TOML) + lines)}")
+        print(f"[v2] Godot へ ogg {n} 本（既存のため残した {kept} 本）")
+        idx = vm.write_godot_index(godot_dir, bv.load_lines(bv.LINES_TOML) + lines)
+        print(f"[v2] 索引: {idx}")
+    write_loudness_report(report)
+    return {"report": report, "copied": n, "kept": kept}
+
+
+def write_loudness_report(report: list[dict]) -> None:
+    out = V2_OUT / "loudness_report.json"
+    out.write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
+    bad = [r for r in report if not r["ok"]]
+    classes = list(LOUDNESS_TARGETS)
+    cells = sorted({r["cell"] for r in report})
+    lines = [
+        "| セル | " + " | ".join(classes) + " | 本数 | 合計 KB |",
+        "|---|" + "---|" * (len(classes) + 2),
+    ]
+    for c in cells:
+        rs = [r for r in report if r["cell"] == c]
+        avg = []
+        for cl in classes:
+            v = [r["lufs"] for r in rs if r["class"] == cl]
+            avg.append(f"{sum(v) / len(v):.1f}" if v else "-")
+        lines.append(
+            f"| {c} | "
+            + " | ".join(avg)
+            + f" | {len(rs)} | {sum(r['bytes'] for r in rs) // 1024} |"
+        )
+    allavg = []
+    for cl in classes:
+        v = [r["lufs"] for r in report if r["class"] == cl]
+        allavg.append(f"{sum(v) / len(v):.1f}" if v else "-")
+    lines.append(
+        "| **全体** | "
+        + " | ".join(allavg)
+        + f" | {len(report)} | {sum(r['bytes'] for r in report) // 1024} |"
+    )
+    lines.append("| 目標 | " + " | ".join(f"{LOUDNESS_TARGETS[c]:.0f}" for c in classes) + " | | |")
+    tp_max = max((r["tp"] for r in report), default=float("-inf"))
+    lines += ["", f"True Peak の最大: {tp_max:.1f} dBTP ／ 基準外: {len(bad)} 本"]
+    lines += [
+        f"- {r['cell']} {r['line']}: {r['lufs']:.1f} LUFS / {r['tp']:.1f} dBTP"
+        f"（目標 {r['target']:.0f}）"
+        for r in bad
+    ]
+    md = V2_OUT / "loudness_report.md"
+    md.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print("\n".join(lines))
+
+
+def cmd_v2_export(args: argparse.Namespace) -> None:
+    m = vm.load_matrix()
+    lines, _ = load_v2()
+    keys, state = [], {}
+    for k in vm.select_cells(m, args.cells):
+        tj = V2_OUT / vm.cell_dir(k) / "takes.json"
+        if tj.is_file():
+            keys.append(k)
+            state[k] = json.loads(tj.read_text(encoding="utf-8"))
+    if not keys:
+        raise SystemExit("書き出すセルが無い（v2-build 前）")
+    print(f"[v2] 書き出し対象 {len(keys)} セル")
+    godot = None if args.no_godot else Path(args.godot_dir)
+    export(keys, state, lines, godot, args.force, repost=not args.no_repost)
 
 
 # --------------------------------------------------------------------------- 試聴ページ
@@ -554,6 +759,14 @@ def add_subcommands(sub) -> None:
     b.add_argument("--force", action="store_true", help="Godot 側の同名 ogg も上書きする")
     b.add_argument("--dry-run", action="store_true")
     b.set_defaults(func=cmd_v2_build)
+
+    e = sub.add_parser("v2-export", help="ラウドネス基準で後処理 → ogg → 実測・補正 → Godot")
+    e.add_argument("--cells", help="race:body をカンマ区切り（* 可）。既定: 生成済み全セル")
+    e.add_argument("--godot-dir", default=str(vm.GODOT_VOICES))
+    e.add_argument("--no-godot", action="store_true", help="ogg 化と実測だけ（Godot へ書かない）")
+    e.add_argument("--force", action="store_true", help="Godot 側の同名 ogg も上書きする")
+    e.add_argument("--no-repost", action="store_true", help="final wav を作り直さない")
+    e.set_defaults(func=cmd_v2_export)
 
     p = sub.add_parser("v2-page", help="v2 の試聴ページだけ作り直す")
     p.add_argument("--cells")
