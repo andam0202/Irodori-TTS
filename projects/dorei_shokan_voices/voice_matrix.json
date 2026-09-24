@@ -1,0 +1,306 @@
+{
+  "_note": "種族×体型ごとの声の割り当て（真実源）。compose は bodies[].voice + races[].tone を caption に合成、preset は presets.toml の id を使う。seed/ref_wav は採用後に固定（matrix-adopt / matrix-serve の保存）。",
+  "audition_seeds": [
+    101,
+    202,
+    303,
+    404
+  ],
+  "races": [
+    {
+      "id": "human",
+      "name": "人間",
+      "tone": "素直で飾らない、自然な口調で話す。"
+    },
+    {
+      "id": "elf",
+      "name": "エルフ",
+      "tone": "おっとりと穏やかに、ゆっくり話す。"
+    },
+    {
+      "id": "dark_elf",
+      "name": "ダークエルフ",
+      "tone": "クールで感情をあまり表に出さず、淡々と話す。"
+    },
+    {
+      "id": "harpy",
+      "name": "ハーピー",
+      "tone": "高く澄んだ声で、歌うように抑揚をつけて話す。"
+    },
+    {
+      "id": "inu",
+      "name": "犬娘",
+      "tone": "犬のように人懐っこく元気いっぱいで、キャンキャンと弾むように話す。"
+    },
+    {
+      "id": "neko",
+      "name": "猫娘",
+      "tone": "猫のように気まぐれで、鼻にかかった甘え声とつんとすました声を交えて話す。"
+    },
+    {
+      "id": "kitsune",
+      "name": "狐娘",
+      "tone": "からかい上手で、含み笑いしながらいたずらっぽく話す。"
+    },
+    {
+      "id": "usagi",
+      "name": "兎娘",
+      "tone": "恥ずかしがりで、もじもじと控えめに話す。"
+    },
+    {
+      "id": "ushi",
+      "name": "牛娘",
+      "tone": "のんびりとおおらかに、包み込むように話す。"
+    },
+    {
+      "id": "succubus",
+      "name": "サキュバス",
+      "tone": "語尾を甘く引き延ばし、妖艶に誘うように話す。"
+    },
+    {
+      "id": "oni",
+      "name": "鬼娘",
+      "tone": "少しハスキーな声で、豪快にさっぱりと話す。"
+    },
+    {
+      "id": "ryujin",
+      "name": "竜人",
+      "tone": "気高く凛とした、芯のある口調で話す。"
+    }
+  ],
+  "bodies": [
+    {
+      "id": "slender",
+      "name": "スレンダー",
+      "voice": "あどけなさの残る、高めの声の20歳前後の女性。"
+    },
+    {
+      "id": "standard",
+      "name": "標準",
+      "voice": "自然な高さの声の、20代の女性。"
+    },
+    {
+      "id": "glamour",
+      "name": "グラマー",
+      "voice": "落ち着いた艶のある声の、大人の女性。"
+    }
+  ],
+  "cells": {
+    "human:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "human:standard": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "human:glamour": {
+      "mode": "preset",
+      "preset": "onesan",
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/onesan.wav"
+    },
+    "elf:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "elf:standard": {
+      "mode": "preset",
+      "preset": "ottori",
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/ottori.wav"
+    },
+    "elf:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "dark_elf:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "dark_elf:standard": {
+      "mode": "preset",
+      "preset": "cool",
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/cool.wav"
+    },
+    "dark_elf:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "harpy:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "harpy:standard": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "harpy:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "inu:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "inu:standard": {
+      "mode": "preset",
+      "preset": "inu",
+      "seed": 101,
+      "ref_wav": "projects/dorei_shokan_voices/refs/inu.wav"
+    },
+    "inu:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "neko:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "neko:standard": {
+      "mode": "preset",
+      "preset": "neko",
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/neko.wav"
+    },
+    "neko:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "kitsune:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "kitsune:standard": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "kitsune:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "usagi:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "usagi:standard": {
+      "mode": "preset",
+      "preset": "ado_shy",
+      "seed": 101,
+      "ref_wav": "projects/dorei_shokan_voices/refs/ado_shy.wav"
+    },
+    "usagi:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "ushi:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "ushi:standard": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "ushi:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "succubus:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "succubus:standard": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "succubus:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "oni:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "oni:standard": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "oni:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "ryujin:slender": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "ryujin:standard": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    },
+    "ryujin:glamour": {
+      "mode": "compose",
+      "preset": "",
+      "seed": 0,
+      "ref_wav": ""
+    }
+  }
+}

@@ -83,16 +83,16 @@ ref_wav = ""
 id = "inu"
 name = "犬娘（キャンキャン）"
 caption = "高く弾むような声の、20歳前後の若い女性。犬のように人懐っこく元気いっぱいで、キャンキャンとよく鳴くように、語尾を跳ねさせて話す。"
-seed = 0
-ref_wav = ""
+seed = 101
+ref_wav = "projects/dorei_shokan_voices/refs/inu.wav"
 round = 2
 
 [[preset]]
 id = "neko"
 name = "猫娘（気まぐれ甘え）"
 caption = "甘えた高めの声の、20歳前後の若い女性。猫のように気まぐれで、鼻にかかった甘え声と、つんとすました声を交えて話す。"
-seed = 0
-ref_wav = ""
+seed = 202
+ref_wav = "projects/dorei_shokan_voices/refs/neko.wav"
 round = 2
 
 [[preset]]
@@ -115,8 +115,8 @@ round = 2
 id = "ado_shy"
 name = "あどけない・恥ずかしがり"
 caption = "あどけなさの残る、高く細い声の20歳前後の女性。恥ずかしがり屋で、もじもじと小声で話す。"
-seed = 0
-ref_wav = ""
+seed = 101
+ref_wav = "projects/dorei_shokan_voices/refs/ado_shy.wav"
 round = 2
 
 [[preset]]

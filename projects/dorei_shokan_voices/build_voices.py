@@ -22,6 +22,13 @@
     outputs/dorei_shokan_voices/voices/<preset>/<line>.wav      （48kHz 生成そのまま）
     outputs/dorei_shokan_voices/ogg/<preset>/<line>.ogg         （Godot 取り込み用 44.1kHz/mono）
 
+種族×体型の割り当て（voice_matrix.json、実体は voice_matrix.py）::
+
+    uv run python projects/dorei_shokan_voices/build_voices.py matrix-serve     # 設定ページ
+    uv run python projects/dorei_shokan_voices/build_voices.py matrix-audition --cells "inu:*,*:slender"
+    uv run python projects/dorei_shokan_voices/build_voices.py matrix-adopt inu:slender 303
+    uv run python projects/dorei_shokan_voices/build_voices.py matrix-build     # → Godot assets/voices
+
 ``--dry-run`` はマニフェストを書いて先頭行と本数を表示するだけで GPU を使わない。
 """
 
@@ -477,6 +484,11 @@ def main() -> None:
     b.add_argument("--no-ogg", action="store_true", help="ogg 変換をしない")
     b.add_argument("--dry-run", action="store_true", help="マニフェストを書いて表示するだけ")
     b.set_defaults(func=cmd_build)
+
+    # 種族×体型の割り当て（voice_matrix.json）。実体は voice_matrix.py
+    import voice_matrix
+
+    voice_matrix.add_subcommands(sub)
 
     args = ap.parse_args()
     args.func(args)
