@@ -560,6 +560,12 @@ def export(
         print(f"[v2] Godot へ ogg {n} 本（既存のため残した {kept} 本）")
         idx = vm.write_godot_index(godot_dir, bv.load_lines(bv.LINES_TOML) + lines)
         print(f"[v2] 索引: {idx}")
+    # 既存のレポートに、今回のセルぶんを差し替えて合わせる（一部セルだけ書き出しても全体表になる）
+    prev_p = V2_OUT / "loudness_report.json"
+    if prev_p.is_file():
+        done = set(keys)
+        prev = json.loads(prev_p.read_text(encoding="utf-8"))
+        report = [r for r in prev if r["cell"] not in done] + report
     write_loudness_report(report)
     return {"report": report, "copied": n, "kept": kept}
 
