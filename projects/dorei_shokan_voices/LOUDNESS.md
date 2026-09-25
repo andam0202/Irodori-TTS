@@ -24,7 +24,7 @@ Godot に書き出す ogg は、1 本ずつ次の基準を満たすようにす�
    丸めると少し小さくなるので、目標との差が 0.2 LU 以内になるまでゲインを合わせ直す。
 3. ogg（vorbis q3・44.1 kHz・モノラル）にしてから `ffmpeg ebur128=peak=true` で実測する。
    - ラウドネスだけがずれた場合は、ogg に変換するときのゲインで補正する。
-   - vorbis 化で True Peak が −1 dBTP を超えた場合は、wav の上限を −2.5 → −3.5 → −5 dBTP と
+   - vorbis 化で True Peak が −1 dBTP を超えた場合は、wav の上限を −2.5 → −3.5 → −5 → −7 → −9 → −12 dBTP と
      下げて作り直す。
 4. 実測の結果は `outputs/dorei_shokan_voices/v2/loudness_report.{json,md}` に書き出す。
    セルごと・種類ごとの平均と、基準から外れたファイルの一覧が入る。

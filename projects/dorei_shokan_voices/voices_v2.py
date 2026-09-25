@@ -46,7 +46,7 @@ TARGET_LUFS, PEAK_DBTP = -16.0, -1.0
 LOUDNESS_TARGETS = {"breath": -20.0, "soft": -18.0, "mid": -16.0, "hard": -14.0, "climax": -14.0}
 LOUDNESS_TOL = 1.0
 WAV_CEILING_DBTP = -1.5  # ogg 化での inter-sample peak の増えを見込んで wav は -1.5 に抑える
-WAV_CEILINGS = (-1.5, -2.5, -3.5, -5.0)  # ogg の True Peak が超えたら順に下げて作り直す
+WAV_CEILINGS = (-1.5, -2.5, -3.5, -5.0, -7.0, -9.0, -12.0)  # ogg の True Peak が超えたら順に下げて作り直す（キス音・水音は -5 でも超えることがある）
 OGG_Q = "3"  # vorbis q3（約 112kbps 相当、声には十分でサイズを抑える）
 # 所要時間の見積もり（inu:standard パイロットの実測: 読み込み 135〜190 秒、合成 2.9 秒/本、
 # 取り直し 1 巡目 5/56・2 巡目 1/56、類似度は起動 15 秒 + 0.6 秒/本、後処理・ogg 0.3 秒/本）
@@ -268,16 +268,21 @@ class ResidentTTS:
         print(f"[v2] {name}: ok={ok} fail={fail}（{time.monotonic() - t0:.0f} 秒）", flush=True)
 
 
+def filter_plays(lines: list[dict], plays: dict, wanted: list[str] | None) -> list[dict]:
+    if not wanted:
+        return lines
+    bad = [p for p in wanted if p not in plays]
+    if bad:
+        raise SystemExit(f"未定義のプレイ: {bad}（{list(plays)}）")
+    return [ln for ln in lines if ln["play"] in wanted]
+
+
 def cmd_v2_build(args: argparse.Namespace) -> None:
     m = vm.load_matrix()
     cfg = bv.load_presets(args.presets_file)
     presets = vm.presets_by_id(cfg)
-    lines, plays = load_v2()
-    if args.plays:
-        bad = [p for p in args.plays if p not in plays]
-        if bad:
-            raise SystemExit(f"未定義のプレイ: {bad}（{list(plays)}）")
-        lines = [ln for ln in lines if ln["play"] in args.plays]
+    all_lines, plays = load_v2()
+    lines = filter_plays(all_lines, plays, args.plays)
     if args.lines:
         lines = bv.pick(lines, args.lines, "行")
     ckpt = bv.checkpoint_path(cfg)
@@ -400,6 +405,8 @@ def cmd_v2_build(args: argparse.Namespace) -> None:
         for lid, v in state[k].items():
             if lid.startswith("_") or not v.get("takes"):
                 continue
+            if lid not in by_id:  # --plays / --lines で絞ったときは今回の対象行だけ後処理する
+                continue
             ok = [t for t in v["takes"] if not t.get("reason")] or [
                 t for t in v["takes"] if t.get("reason") not in ("無音", "生成失敗")
             ]
@@ -417,7 +424,7 @@ def cmd_v2_build(args: argparse.Namespace) -> None:
         (info[k]["dir"] / "takes.json").write_text(
             json.dumps(state[k], ensure_ascii=False, indent=1), encoding="utf-8"
         )
-        write_page(k, state[k], lines, plays)
+        write_page(k, state[k], all_lines, plays)
     print(
         f"[v2] 生成 {counts['generated']} 本（うち取り直し {counts['retaken']}）"
         f" {time.monotonic() - t0:.0f} 秒"
@@ -433,7 +440,7 @@ def cmd_v2_build(args: argparse.Namespace) -> None:
             f" → {SERVE_URL.format(dir=vm.cell_dir(k))}"
         )
     if not args.no_godot:
-        export(keys, state, lines, Path(args.godot_dir), args.force)
+        export(keys, state, lines, Path(args.godot_dir), args.force, index_lines=all_lines)
     else:
         print("[v2] Godot へは書き出していない（v2-export で基準適用・実測・書き出し）")
 
@@ -497,6 +504,7 @@ def export(
     godot_dir: Path | None,
     force: bool,
     repost: bool = True,
+    index_lines: list[dict] | None = None,
 ) -> dict:
     """final wav（必要なら基準で後処理し直し）→ ogg（出力側に仮置き）→ 実測・外れを直す → Godot へ。"""
     by_id = {ln["id"]: ln for ln in lines}
@@ -558,14 +566,17 @@ def export(
             shutil.copy2(r["ogg"], dst)
             n += 1
         print(f"[v2] Godot へ ogg {n} 本（既存のため残した {kept} 本）")
-        idx = vm.write_godot_index(godot_dir, bv.load_lines(bv.LINES_TOML) + lines)
+        idx = vm.write_godot_index(
+            godot_dir, bv.load_lines(bv.LINES_TOML) + (index_lines or lines)
+        )
         print(f"[v2] 索引: {idx}")
-    # 既存のレポートに、今回のセルぶんを差し替えて合わせる（一部セルだけ書き出しても全体表になる）
+    # 既存のレポートに、今回の（セル, 行）ぶんを差し替えて合わせる
+    # （一部セル・一部プレイだけ書き出しても全体表になる）
     prev_p = V2_OUT / "loudness_report.json"
     if prev_p.is_file():
-        done = set(keys)
+        done = {(k, lid) for k in keys for lid in by_id}
         prev = json.loads(prev_p.read_text(encoding="utf-8"))
-        report = [r for r in prev if r["cell"] not in done] + report
+        report = [r for r in prev if (r["cell"], r["line"]) not in done] + report
     write_loudness_report(report)
     return {"report": report, "copied": n, "kept": kept}
 
@@ -615,7 +626,8 @@ def write_loudness_report(report: list[dict]) -> None:
 
 def cmd_v2_export(args: argparse.Namespace) -> None:
     m = vm.load_matrix()
-    lines, _ = load_v2()
+    all_lines, plays = load_v2()
+    lines = filter_plays(all_lines, plays, args.plays)
     keys, state = [], {}
     for k in vm.select_cells(m, args.cells):
         tj = V2_OUT / vm.cell_dir(k) / "takes.json"
@@ -626,7 +638,7 @@ def cmd_v2_export(args: argparse.Namespace) -> None:
         raise SystemExit("書き出すセルが無い（v2-build 前）")
     print(f"[v2] 書き出し対象 {len(keys)} セル")
     godot = None if args.no_godot else Path(args.godot_dir)
-    export(keys, state, lines, godot, args.force, repost=not args.no_repost)
+    export(keys, state, lines, godot, args.force, repost=not args.no_repost, index_lines=all_lines)
 
 
 # --------------------------------------------------------------------------- 試聴ページ
@@ -768,6 +780,7 @@ def add_subcommands(sub) -> None:
 
     e = sub.add_parser("v2-export", help="ラウドネス基準で後処理 → ogg → 実測・補正 → Godot")
     e.add_argument("--cells", help="race:body をカンマ区切り（* 可）。既定: 生成済み全セル")
+    e.add_argument("--plays", nargs="+", help="プレイの種類（既定: 全部）。他のプレイの ogg・実測は残す")
     e.add_argument("--godot-dir", default=str(vm.GODOT_VOICES))
     e.add_argument("--no-godot", action="store_true", help="ogg 化と実測だけ（Godot へ書かない）")
     e.add_argument("--force", action="store_true", help="Godot 側の同名 ogg も上書きする")

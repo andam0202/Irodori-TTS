@@ -2,7 +2,7 @@
 # 台詞は無し（2026-09-25 ユーザー指示）。内訳: 吐息1・弱い喘ぎ2・中くらいの喘ぎ1・強い喘ぎ2・絶頂1、すべて擬音のみ。
 # ゲームでは部屋のプレイ種類の行からランダムに流す（同じ行の連続は避ける）。climax = true の行は行為の終わりにだけ流す。
 #   id             … <play>_<種別><nn>（b=吐息 m=喘ぎ c=絶頂。m05 は中くらいの喘ぎ）
-#   play           … wall / chair / bed / sofa / kingbed / whip / horse / pleasure
+#   play           … wall / chair / bed / sofa / kingbed / whip / horse / pleasure / handjob / fella / bondage
 #   kind           … breath / moan（参照音声はどちらもセルの喘ぎ参照）
 #   level          … soft（弱い）/ mid（中くらい）/ hard（強い）
 #   climax         … true なら絶頂行
@@ -19,6 +19,9 @@ kingbed = { name = "高級ベッド", direction = "濃厚で長く、何度も�
 whip = { name = "調教ムチ", direction = "打たれる痛みの短い悲鳴と、だんだん甘さが混じる" }
 horse = { name = "調教木馬", direction = "揺れに耐える苦しげな声、途切れ途切れ" }
 pleasure = { name = "快楽拷問", direction = "焦らされて懇願する、我慢できずに高まる" }
+handjob = { name = "手コキ（キスしながら）", direction = "並んで座り唇を重ねたまま手で奉仕する。湿ったキスの音と、鼻から漏れる甘い吐息が主役" }
+fella = { name = "フェラ", direction = "ひざまずいて口いっぱいに頬張る。くぐもった声と湿った音、息継ぎ" }
+bondage = { name = "調教緊縛", direction = "両手を頭の上で縛られて身動きできず、身をよじって悶える。焦れた切ない声が次第に高まる" }
 
 # ---- wall: 壁尻（壁越しでくぐもる・顔が見えない不安と羞恥、押し殺した声） ----
 [[line]]
@@ -530,4 +533,196 @@ level = "hard"
 climax = true
 text = "あっ、あっ……あぁぁぁぁっ……！"
 style = "今は焦らされた末に我慢できずに絶頂し、声が裏返るほど高く叫んでいる。言葉は無い。"
+duration_scale = 1.3
+
+# ---- handjob: 手コキ（キスしながら）（並んで座り唇を重ねたまま手で奉仕する。湿ったキスの音と、鼻から漏れる甘い吐息が主役） ----
+[[line]]
+id = "handjob_b01"
+play = "handjob"
+kind = "breath"
+text = "ちゅ……ん……ふぅ……ちゅっ……"
+style = "今はキスしながら手で奉仕し、唇を重ねたまま鼻から甘い吐息を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "handjob_m01"
+play = "handjob"
+kind = "moan"
+level = "soft"
+text = "ちゅっ……ちゅ、んちゅ……っ……"
+style = "今はキスしながら手で奉仕し、湿った音を立てて小さく唇を吸っている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "handjob_m02"
+play = "handjob"
+kind = "moan"
+level = "soft"
+text = "んむ……ちゅぷ……ちゅっ、ちゅ……"
+style = "今はキスしながら手で奉仕し、唇を重ねたまま甘く鼻を鳴らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "handjob_m05"
+play = "handjob"
+kind = "moan"
+level = "mid"
+text = "んちゅ……ちゅる……はむ、ちゅっ……んっ……"
+style = "今はキスしながら手の動きを速め、唇を深く重ねて湿った音と甘い声を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "handjob_m03"
+play = "handjob"
+kind = "moan"
+level = "hard"
+text = "ちゅぱ、ちゅっ……んむぅ……ちゅる、ちゅっ……"
+style = "今はキスしながら夢中で手を動かし、激しく唇を吸いながら鼻にかかった声を上げている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "handjob_m04"
+play = "handjob"
+kind = "moan"
+level = "hard"
+text = "はむ、ちゅぷ……れろ……ちゅうっ……んぅ……"
+style = "今はキスしながら舌を絡め、手で奉仕しながら湿った音と高まった声を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "handjob_c01"
+play = "handjob"
+kind = "moan"
+level = "hard"
+climax = true
+text = "ちゅうぅ……っ……ぷはぁ……はぁ……"
+style = "今はキスしながら相手が果てるまで手で奉仕し、最後に強く唇を吸ってから離して息を継いでいる。言葉は無い。"
+duration_scale = 1.3
+
+# ---- fella: フェラ（ひざまずいて口いっぱいに頬張る。くぐもった声と湿った音、息継ぎ） ----
+[[line]]
+id = "fella_b01"
+play = "fella"
+kind = "breath"
+text = "ちゅ……れろ……ふぅ……"
+style = "今はひざまずいて口に含んだまま、ゆっくり舐めながら鼻から息を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "fella_m01"
+play = "fella"
+kind = "moan"
+level = "soft"
+text = "んむ……ちゅぷ……んっ……"
+style = "今は口に含んだまま、ゆっくり吸いながらくぐもった小さな声を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "fella_m02"
+play = "fella"
+kind = "moan"
+level = "soft"
+text = "はむ……じゅぷ……んふ……"
+style = "今は口に含んだまま、頬張って湿った音を立て、鼻から甘い声を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "fella_m05"
+play = "fella"
+kind = "moan"
+level = "mid"
+text = "んぐ……じゅぷ、じゅぷ……んむっ……"
+style = "今は口に含んだまま頭を動かし、湿った音とくぐもった声を少しずつ大きくしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "fella_m03"
+play = "fella"
+kind = "moan"
+level = "hard"
+text = "じゅぽ、じゅぽっ……んぐぅ……んむっ……"
+style = "今は口に含んだまま激しく頭を動かし、喉の奥でくぐもった声を上げている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "fella_m04"
+play = "fella"
+kind = "moan"
+level = "hard"
+text = "んぶっ……じゅるるっ……んぐ、んぐっ……"
+style = "今は口いっぱいに含んだまま強く吸い上げ、苦しげにくぐもった声を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "fella_c01"
+play = "fella"
+kind = "moan"
+level = "hard"
+climax = true
+text = "んんぅっ……！ ……んく、こくっ……ぷはっ……けほっ……"
+style = "今は口に含んだまま受け止めて飲み込み、口を離して息継ぎしながら小さくむせている。言葉は無い。"
+duration_scale = 1.3
+
+# ---- bondage: 調教緊縛（両手を頭の上で縛られて身動きできず、身をよじって悶える。焦れた切ない声が次第に高まる） ----
+[[line]]
+id = "bondage_b01"
+play = "bondage"
+kind = "breath"
+text = "はぁ……ふぅ……んっ……"
+style = "今は両手を頭の上で縛られて身をよじりながら、もどかしそうに熱い息を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "bondage_m01"
+play = "bondage"
+kind = "moan"
+level = "soft"
+text = "んっ……や、ぁ……っ……"
+style = "今は縛られて身をよじりながら、動けないもどかしさに小さく切ない声を漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "bondage_m02"
+play = "bondage"
+kind = "moan"
+level = "soft"
+text = "くぅ……んっ……ふぁ……"
+style = "今は縛られて身をよじりながら、焦れったさにこらえきれない声を小さく漏らしている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "bondage_m05"
+play = "bondage"
+kind = "moan"
+level = "mid"
+text = "んんっ……あぁ……っ……はぁっ……"
+style = "今は縛られて身をよじりながら、切ない声を少しずつ大きくして悶えている。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "bondage_m03"
+play = "bondage"
+kind = "moan"
+level = "hard"
+text = "あっ、あぁっ……んぅうっ……！"
+style = "今は縛られて身をよじりながら、逃げられない快感に強く喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "bondage_m04"
+play = "bondage"
+kind = "moan"
+level = "hard"
+text = "ひぅっ……あ、あぁぁっ……んんっ……！"
+style = "今は縛られて身をよじりながら、縄をきしませて高く切ない声で喘いでいる。言葉は無い。"
+duration_scale = 1.3
+
+[[line]]
+id = "bondage_c01"
+play = "bondage"
+kind = "moan"
+level = "hard"
+climax = true
+text = "あぁぁっ……！ んぅううっ……！ ……はぁ、はぁ……"
+style = "今は縛られて身をよじりながら絶頂し、高く叫んだあと荒い息をついている。言葉は無い。"
 duration_scale = 1.3
