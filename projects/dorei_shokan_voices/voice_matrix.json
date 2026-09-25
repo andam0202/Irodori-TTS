@@ -95,8 +95,8 @@
     "human:standard": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/human_standard.wav"
     },
     "human:glamour": {
       "mode": "preset",
@@ -149,14 +149,14 @@
     "harpy:standard": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 101,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/harpy_standard.wav"
     },
     "harpy:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/harpy_glamour.wav"
     },
     "inu:kogara": {
       "mode": "compose",
@@ -203,14 +203,14 @@
     "kitsune:standard": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/kitsune_standard.wav"
     },
     "kitsune:glamour": {
       "mode": "compose",
       "preset": "",
-      "seed": 0,
-      "ref_wav": ""
+      "seed": 202,
+      "ref_wav": "projects/dorei_shokan_voices/refs/matrix/kitsune_glamour.wav"
     },
     "usagi:kogara": {
       "mode": "compose",
